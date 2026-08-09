@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Appointment, AppointmentStatus, StoreSettings } from '../types';
-import { formatBRL, buildReadyMessage, openWhatsApp } from '../utils/whatsapp';
+import { formatBRL, buildReadyMessage, buildApprovalMessage, openWhatsApp } from '../utils/whatsapp';
 import {
   Calendar,
   Clock,
@@ -125,6 +125,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
 
   const handleNotifyCarReady = (apt: Appointment) => {
     const msg = buildReadyMessage(apt, settings.storeName);
+    openWhatsApp(apt.customerPhone || settings.whatsappPhone, msg);
+  };
+
+  const handleApprove = (apt: Appointment) => {
+    onUpdateStatus(apt.id, 'aprovado');
+    const msg = buildApprovalMessage(apt, settings.storeName);
     openWhatsApp(apt.customerPhone || settings.whatsappPhone, msg);
   };
 
@@ -326,9 +332,9 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                 <div className="flex items-center gap-2">
                   {apt.status === 'agendado' && (
                     <button
-                      onClick={() => onUpdateStatus(apt.id, 'aprovado')}
+                      onClick={() => handleApprove(apt)}
                       className="px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-400 text-white font-black text-xs flex items-center gap-1 shadow-md shadow-violet-500/20 cursor-pointer transition-all"
-                      title="Aprovar este agendamento e bloquear o horário para novos clientes"
+                      title="Aprovar este agendamento e enviar confirmação ao cliente no WhatsApp"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Aprovar</span>

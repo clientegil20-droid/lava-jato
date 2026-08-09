@@ -90,6 +90,22 @@ export function buildReadyMessage(apt: Appointment, storeName: string): string {
 }
 
 /**
+ * Builds a short confirmation message sent to the client when their
+ * appointment is approved by the staff
+ */
+export function buildApprovalMessage(apt: Appointment, storeName: string): string {
+  const formattedDate = apt.date.split('-').reverse().join('/');
+  let msg = `✅ Olá, *${apt.customerName}*!\n`;
+  msg += `Seu agendamento no *${storeName}* foi *APROVADO*!\n\n`;
+  msg += `📅 *${formattedDate}* às *${apt.timeSlot}*\n`;
+  msg += `🚗 ${apt.carModel} (${apt.vehicleName})\n`;
+  msg += `🧼 ${apt.washName}\n`;
+  msg += `💰 ${formatBRL(apt.totalPrice)}\n\n`;
+  msg += `Aguardamos você! 🚿✨`;
+  return msg;
+}
+
+/**
  * Opens WhatsApp url with custom text message
  */
 export function openWhatsApp(phone: string, textMessage: string): void {
