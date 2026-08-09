@@ -375,6 +375,7 @@ export default function App() {
           /* Dedicated Client Booking Form */
           <ClientBookingForm
             settings={settings}
+            appointments={appointments}
             onConfirmAppointment={handleConfirmAppointment}
             onSwitchToStaff={() => setAppMode('funcionario')}
             isClientOnly={isClientLink}

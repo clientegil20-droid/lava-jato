@@ -69,7 +69,7 @@ export function buildReceiptMessage(
 
   msg += `\n💰 *VALOR TOTAL:* ${formatBRL(apt.totalPrice)}\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `✅ *STATUS:* Confirmado e Agendado\n\n`;
+  msg += `✅ *STATUS:* ${apt.status === 'aprovado' ? 'Confirmado e Aprovado' : 'Recebido — Aguardando Confirmação'}\n\n`;
   msg += `Obrigado por escolher o *${storeName}*! Dúvidas? Fale conosco no WhatsApp ${storePhone}.`;
 
   return msg;

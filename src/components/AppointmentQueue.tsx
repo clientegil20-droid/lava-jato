@@ -48,6 +48,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
             <Clock className="w-3.5 h-3.5 text-amber-400" /> Agendado
           </span>
         );
+      case 'aprovado':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center gap-1.5 shadow-sm shadow-violet-500/10">
+            <CheckCircle2 className="w-3.5 h-3.5 text-violet-400" /> Aprovado
+          </span>
+        );
       case 'em_lavagem':
         return (
           <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center gap-1.5 animate-pulse shadow-sm shadow-blue-500/10">
@@ -79,6 +85,8 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
     switch (status) {
       case 'agendado':
         return 'border-l-4 border-l-amber-500';
+      case 'aprovado':
+        return 'border-l-4 border-l-violet-500';
       case 'em_lavagem':
         return 'border-l-4 border-l-blue-500';
       case 'pronto':
@@ -177,6 +185,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           {[
             { id: 'todos', label: 'Todos' },
             { id: 'agendado', label: 'Agendados' },
+            { id: 'aprovado', label: 'Aprovados' },
             { id: 'em_lavagem', label: 'Em Lavagem' },
             { id: 'pronto', label: 'Prontos' },
             { id: 'entregue', label: 'Concluídos' },
@@ -305,6 +314,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                     className="px-2.5 py-1.5 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs font-semibold focus:border-cyan-400 focus:outline-none cursor-pointer"
                   >
                     <option value="agendado">🕒 Agendado</option>
+                    <option value="aprovado">✅ Aprovado</option>
                     <option value="em_lavagem">🧼 Em Lavagem</option>
                     <option value="pronto">✨ Pronto para Retirada</option>
                     <option value="entregue">✅ Entregue / Concluído</option>
@@ -312,8 +322,19 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                   </select>
                 </div>
 
-                {/* Buttons: Send Comprovante & Send Ready Notification */}
+                {/* Buttons: Approve, Send Comprovante & Send Ready Notification */}
                 <div className="flex items-center gap-2">
+                  {apt.status === 'agendado' && (
+                    <button
+                      onClick={() => onUpdateStatus(apt.id, 'aprovado')}
+                      className="px-3 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-400 text-white font-black text-xs flex items-center gap-1 shadow-md shadow-violet-500/20 cursor-pointer transition-all"
+                      title="Aprovar este agendamento e bloquear o horário para novos clientes"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Aprovar</span>
+                    </button>
+                  )}
+
                   {apt.status === 'pronto' && (
                     <button
                       onClick={() => handleNotifyCarReady(apt)}

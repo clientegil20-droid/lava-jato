@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Appointment, ExtraService, PriceMatrix, StoreSettings, VehicleId, VehicleOption, WashId, WashOption } from '../types';
 import { DEFAULT_VEHICLES, DEFAULT_WASHES } from '../data/defaultData';
 import { buildReceiptMessage, openWhatsApp, formatBRL } from '../utils/whatsapp';
@@ -21,6 +21,7 @@ import {
   Lock,
   ChevronRight,
   ShieldCheck,
+  CalendarX2,
 } from 'lucide-react';
 
 interface ClientBookingFormProps {
@@ -28,6 +29,7 @@ interface ClientBookingFormProps {
   onConfirmAppointment: (appointment: Appointment) => void;
   onSwitchToStaff: () => void;
   isClientOnly?: boolean;
+  appointments?: Appointment[];
 }
 
 export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
@@ -35,6 +37,7 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
   onConfirmAppointment,
   onSwitchToStaff,
   isClientOnly = false,
+  appointments = [],
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -69,6 +72,28 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
     '16:30',
     '17:30',
   ];
+
+  // Statuses that occupy a slot (approved and beyond blocks it for new clients)
+  const BLOCKING_STATUSES: Appointment['status'][] = ['aprovado', 'em_lavagem', 'pronto', 'entregue'];
+
+  const blockedTimeSlots = appointments
+    .filter((apt) => apt.date === date && BLOCKING_STATUSES.includes(apt.status))
+    .map((apt) => apt.timeSlot);
+
+  const isSlotBlocked = (slot: string) => blockedTimeSlots.includes(slot);
+
+  // Automatically move to the first available slot if the selected one is blocked
+  useEffect(() => {
+    if (isSlotBlocked(timeSlot)) {
+      const firstAvailable = timeSlots.find((slot) => !isSlotBlocked(slot));
+      if (firstAvailable) {
+        setTimeSlot(firstAvailable);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, appointments]);
+
+  const isDateFullyBooked = timeSlots.every((slot) => isSlotBlocked(slot));
 
   // Calculate Total
   let total = 0;
@@ -126,6 +151,11 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
 
     if (deliveryOption && !address.trim()) {
       setValidationError('Por favor, informe o Endereço para busca no Leva e Traz.');
+      return;
+    }
+
+    if (isSlotBlocked(timeSlot)) {
+      setValidationError('Infelizmente este horário acabou de ser reservado. Por favor, escolha outro horário disponível.');
       return;
     }
 
@@ -463,22 +493,34 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
               <div className="grid grid-cols-3 gap-1.5">
                 {timeSlots.map((slot) => {
                   const isSelected = timeSlot === slot;
+                  const isBlocked = isSlotBlocked(slot);
                   return (
                     <button
                       key={slot}
                       type="button"
+                      disabled={isBlocked}
                       onClick={() => setTimeSlot(slot)}
                       className={`py-1.5 px-2 rounded-lg font-mono text-[11px] font-bold text-center border transition-all cursor-pointer ${
-                        isSelected
+                        isBlocked
+                          ? 'border-gray-900 bg-gray-950/80 text-gray-600 line-through opacity-60 cursor-not-allowed'
+                          : isSelected
                           ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-sm'
                           : 'border-gray-800 bg-[#121215] text-gray-300 hover:border-gray-700'
                       }`}
+                      title={isBlocked ? 'Horário já reservado / indisponível' : slot}
                     >
-                      {slot}
+                      {isBlocked ? `${slot} ✕` : slot}
                     </button>
                   );
                 })}
               </div>
+
+              {isDateFullyBooked && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] font-semibold">
+                  <CalendarX2 className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>Esta data está totalmente reservada. Escolha outra data ou entre em contato pelo WhatsApp.</span>
+                </div>
+              )}
             </div>
           </div>
 

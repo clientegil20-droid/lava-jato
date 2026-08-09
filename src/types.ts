@@ -41,7 +41,7 @@ export interface CustomerData {
   notes: string;
 }
 
-export type AppointmentStatus = 'agendado' | 'em_lavagem' | 'pronto' | 'entregue' | 'cancelado';
+export type AppointmentStatus = 'agendado' | 'aprovado' | 'em_lavagem' | 'pronto' | 'entregue' | 'cancelado';
 
 export interface Appointment {
   id: string;
