@@ -1,6 +1,6 @@
 import React from 'react';
-import { StoreSettings, UserRole } from '../types';
-import { Settings, MapPin, PhoneCall, User, Wrench, Link, Lock, Unlock } from 'lucide-react';
+import { Employee, StoreSettings, UserRole } from '../types';
+import { Settings, MapPin, PhoneCall, User, Wrench, Link, Lock, Unlock, LogOut, UserCircle } from 'lucide-react';
 
 interface HeaderProps {
   settings: StoreSettings;
@@ -12,6 +12,8 @@ interface HeaderProps {
   isClientOnly?: boolean;
   role?: UserRole;
   onRequestOwnerAccess?: () => void;
+  currentEmployee?: Employee | null;
+  onLogoutEmployee?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,12 +26,14 @@ export const Header: React.FC<HeaderProps> = ({
   isClientOnly = false,
   role = 'funcionario',
   onRequestOwnerAccess,
+  currentEmployee,
+  onLogoutEmployee,
 }) => {
   const isOwner = role === 'dono';
 
   return (
     <header className="relative bg-gradient-to-b from-[#1a232e] via-[#121214] to-[#121214] pt-6 pb-6 px-4 border-b border-cyan-500/20">
-      <div className="max-w-2xl mx-auto text-center relative">
+      <div className="max-w-2xl md:max-w-4xl lg:max-w-6xl mx-auto text-center relative">
         {/* Top bar with mode switcher & settings (hidden for client-only link) */}
         {!isClientOnly && (
         <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-gray-800/60">
@@ -76,6 +80,26 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden sm:inline">Enviar Link p/ Cliente</span>
                 <span className="sm:hidden">Link</span>
               </button>
+            )}
+
+            {currentEmployee && !isOwner && (
+              <span
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-xs font-bold text-cyan-300"
+                title="Funcionário logado"
+              >
+                <UserCircle className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">{currentEmployee.name}</span>
+                <span className="sm:hidden">{currentEmployee.code}</span>
+                {onLogoutEmployee && (
+                  <button
+                    onClick={onLogoutEmployee}
+                    className="p-0.5 ml-0.5 text-rose-300 hover:text-rose-200 transition-colors cursor-pointer"
+                    title="Sair da conta do funcionário"
+                  >
+                    <LogOut className="w-3 h-3" />
+                  </button>
+                )}
+              </span>
             )}
 
             {isOwner ? (

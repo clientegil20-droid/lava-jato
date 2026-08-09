@@ -65,6 +65,8 @@ export interface Appointment {
   notes?: string;
   status: AppointmentStatus;
   createdBy: 'cliente' | 'funcionario';
+  employeeId?: string; // employee who created/registered the appointment
+  employeeName?: string; // employee name at creation
   paymentMethod?: PaymentMethod;
   paidAt?: string;
   completedBy?: string; // employee name/phone
@@ -72,10 +74,14 @@ export interface Appointment {
   pendingStatusChange?: AppointmentStatus | null; // status requested by employee, awaiting owner approval
 }
 
+export const LOCAL_STORAGE_EMPLOYEE_KEY = 'lava_jato_redencao_current_employee_v1';
+
 export interface Employee {
   id: string;
   name: string;
   phone: string;
+  code: string; // login code
+  password: string; // login password
   // Compensation model
   payModel: 'salario' | 'comissao' | 'porcentagem';
   // salario: monthly or daily fixed

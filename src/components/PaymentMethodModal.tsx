@@ -8,6 +8,7 @@ interface PaymentMethodModalProps {
   onClose: () => void;
   appointment: Appointment | null;
   employees: Employee[];
+  defaultEmployeeId?: string;
   onConfirm: (method: PaymentMethod, completedBy?: string) => void;
 }
 
@@ -23,10 +24,11 @@ export const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
   onClose,
   appointment,
   employees,
+  defaultEmployeeId,
   onConfirm,
 }) => {
   const [selected, setSelected] = useState<PaymentMethod | null>(null);
-  const [completedBy, setCompletedBy] = useState<string>('');
+  const [completedBy, setCompletedBy] = useState<string>(defaultEmployeeId || '');
 
   if (!isOpen || !appointment) return null;
 

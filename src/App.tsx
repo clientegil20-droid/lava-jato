@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Appointment, AppointmentStatus, PaymentMethod, StoreSettings, UserRole, VehicleId, WashId } from './types';
+import { Appointment, AppointmentStatus, Employee, PaymentMethod, StoreSettings, UserRole, VehicleId, WashId, LOCAL_STORAGE_EMPLOYEE_KEY } from './types';
 import { DEFAULT_SETTINGS, DEFAULT_VEHICLES, DEFAULT_WASHES } from './data/defaultData';
 import { buildReceiptMessage, openWhatsApp } from './utils/whatsapp';
 import {
@@ -26,7 +26,8 @@ import { AppointmentQueue } from './components/AppointmentQueue';
 import { ClientBookingForm } from './components/ClientBookingForm';
 import { OwnerPasswordModal } from './components/OwnerPasswordModal';
 import { OwnerDashboard } from './components/OwnerDashboard';
-import { Share2, RotateCcw, HelpCircle, Wrench, User, Link as LinkIcon, Sparkles, Lock } from 'lucide-react';
+import { EmployeeLoginModal } from './components/EmployeeLoginModal';
+import { Share2, RotateCcw, HelpCircle, Wrench, User, Link as LinkIcon, Sparkles, Lock, LogOut } from 'lucide-react';
 
 const SAMPLE_APPOINTMENTS: Appointment[] = [
   {
@@ -100,6 +101,17 @@ export default function App() {
   const [role, setRole] = useState<UserRole>('funcionario');
   const [isOwnerPasswordOpen, setIsOwnerPasswordOpen] = useState(false);
   const [isOwnerDashboardOpen, setIsOwnerDashboardOpen] = useState(false);
+  const [isEmployeeLoginOpen, setIsEmployeeLoginOpen] = useState(false);
+
+  // Currently logged in employee (persisted)
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_EMPLOYEE_KEY);
+      return saved ? (JSON.parse(saved) as Employee) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   // Load saved settings or use default
   const [settings, setSettings] = useState<StoreSettings>(() => {
@@ -270,14 +282,20 @@ export default function App() {
   };
 
   const handleConfirmAppointment = (newApt: Appointment) => {
-    const updated = [newApt, ...appointments];
+    const enriched = {
+      ...newApt,
+      ...(currentEmployee
+        ? { employeeId: currentEmployee.id, employeeName: currentEmployee.name }
+        : {}),
+    };
+    const updated = [enriched, ...appointments];
     saveAppointmentsToStorage(updated);
-    upsertAppointment(newApt);
-    setSelectedReceiptApt(newApt); // Open receipt modal
+    upsertAppointment(enriched);
+    setSelectedReceiptApt(enriched);
 
     // Automatically send message to company WhatsApp when appointment is created by client
-    if (newApt.createdBy === 'cliente' || appMode === 'cliente') {
-      const msg = buildReceiptMessage(newApt, settings.storeName, settings.whatsappPhone);
+    if (enriched.createdBy === 'cliente' || appMode === 'cliente') {
+      const msg = buildReceiptMessage(enriched, settings.storeName, settings.whatsappPhone);
       openWhatsApp(settings.whatsappPhone, msg);
     }
   };
@@ -290,6 +308,11 @@ export default function App() {
   ) => {
     let updated = appointments;
 
+    const actingEmployeeId = completedBy ?? currentEmployee?.id;
+    const actingEmployeeName =
+      settings.employees.find((e) => e.id === actingEmployeeId)?.name ??
+      currentEmployee?.name;
+
     if (role === 'dono') {
       // Owner changes freely
       updated = appointments.map((apt) =>
@@ -299,7 +322,8 @@ export default function App() {
               status: newStatus,
               paymentMethod: paymentMethod ?? apt.paymentMethod,
               paidAt: paymentMethod ? new Date().toISOString() : apt.paidAt,
-              completedBy: completedBy ?? apt.completedBy,
+              completedBy: actingEmployeeId ?? apt.completedBy,
+              employeeName: actingEmployeeName ?? apt.employeeName,
               pendingStatusChange: null,
               statusChangeCount: (apt.statusChangeCount || 0) + 1,
             }
@@ -316,7 +340,8 @@ export default function App() {
             status: newStatus,
             paymentMethod: paymentMethod ?? apt.paymentMethod,
             paidAt: paymentMethod ? new Date().toISOString() : apt.paidAt,
-            completedBy: completedBy ?? apt.completedBy,
+            completedBy: actingEmployeeId ?? apt.completedBy,
+            employeeName: actingEmployeeName ?? apt.employeeName,
             pendingStatusChange: null,
             statusChangeCount: 1,
           };
@@ -327,7 +352,8 @@ export default function App() {
           pendingStatusChange: newStatus,
           paymentMethod: paymentMethod ?? apt.paymentMethod,
           paidAt: paymentMethod ? new Date().toISOString() : apt.paidAt,
-          completedBy: completedBy ?? apt.completedBy,
+          completedBy: actingEmployeeId ?? apt.completedBy,
+          employeeName: actingEmployeeName ?? apt.employeeName,
         };
       });
     }
@@ -336,7 +362,8 @@ export default function App() {
     updateAppointmentStatusDb(id, newStatus, {
       paymentMethod: paymentMethod,
       paidAt: paymentMethod ? new Date().toISOString() : undefined,
-      completedBy,
+      completedBy: actingEmployeeId ?? undefined,
+      employeeName: actingEmployeeName ?? undefined,
       pendingStatusChange:
         updated.find((a) => a.id === id)?.pendingStatusChange ?? null,
       statusChangeCount: updated.find((a) => a.id === id)?.statusChangeCount,
@@ -347,12 +374,16 @@ export default function App() {
   const handleApproveStatusChange = (id: string) => {
     const apt = appointments.find((a) => a.id === id);
     if (!apt || !apt.pendingStatusChange) return;
+    const actingEmployeeName =
+      settings.employees.find((e) => e.id === apt.completedBy)?.name ??
+      apt.employeeName;
     const updated = appointments.map((a) =>
       a.id === id
         ? {
             ...a,
             status: apt.pendingStatusChange as AppointmentStatus,
             pendingStatusChange: null,
+            employeeName: actingEmployeeName ?? a.employeeName,
             statusChangeCount: (a.statusChangeCount || 0) + 1,
           }
         : a
@@ -360,6 +391,7 @@ export default function App() {
     saveAppointmentsToStorage(updated);
     updateAppointmentStatusDb(id, apt.pendingStatusChange as AppointmentStatus, {
       pendingStatusChange: null,
+      employeeName: actingEmployeeName ?? undefined,
       statusChangeCount: (apt.statusChangeCount || 0) + 1,
     });
   };
@@ -409,9 +441,44 @@ export default function App() {
     setIsOwnerPasswordOpen(true);
   };
 
+  const handleChangeMode = (mode: 'cliente' | 'funcionario') => {
+    if (mode === 'cliente') {
+      setAppMode('cliente');
+      return;
+    }
+    // Entering the Store Panel requires an employee login (unless owner unlocked)
+    if (role === 'dono' || currentEmployee) {
+      setAppMode('funcionario');
+      return;
+    }
+    setIsEmployeeLoginOpen(true);
+  };
+
   const handleOwnerPasswordSuccess = () => {
     setRole('dono');
     setIsOwnerPasswordOpen(false);
+  };
+
+  const handleEmployeeLogin = (emp: Employee) => {
+    setCurrentEmployee(emp);
+    setIsEmployeeLoginOpen(false);
+    setAppMode('funcionario');
+    try {
+      localStorage.setItem(LOCAL_STORAGE_EMPLOYEE_KEY, JSON.stringify(emp));
+    } catch (e) {
+      console.error('Failed to persist employee login', e);
+    }
+  };
+
+  const handleEmployeeLogout = () => {
+    setCurrentEmployee(null);
+    setRole('funcionario');
+    setIsOwnerDashboardOpen(false);
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_EMPLOYEE_KEY);
+    } catch (e) {
+      console.error('Failed to clear employee login', e);
+    }
   };
 
   const handleDeleteAppointment = (id: string) => {
@@ -473,22 +540,24 @@ export default function App() {
       <Header
         settings={settings}
         appMode={appMode}
-        onChangeMode={setAppMode}
+        onChangeMode={handleChangeMode}
         appointmentCount={appointments.length}
         onOpenSettings={() => setIsAdminOpen(true)}
         onOpenShareLink={() => setIsShareOpen(true)}
         isClientOnly={isClientLink}
         role={role}
         onRequestOwnerAccess={handleOwnerAccessRequest}
+        currentEmployee={currentEmployee}
+        onLogoutEmployee={handleEmployeeLogout}
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 pt-6 pb-32">
+      <main className="flex-1 max-w-2xl md:max-w-4xl lg:max-w-6xl w-full mx-auto px-4 pt-6 pb-32">
         {/* Mode Switch Navigation Banner */}
         {appMode === 'funcionario' ? (
           /* Staff View */
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#1d1d22] border border-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-[#1d1d22] border border-gray-800">
               <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-bold text-gray-200">
@@ -498,12 +567,16 @@ export default function App() {
                       Modo Dono Desbloqueado
                     </span>
                   ) : (
-                    'Modo Atendente / Funcionário Ativo'
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-cyan-300">👤 {currentEmployee?.name}</span>
+                      <span className="text-gray-500">•</span>
+                      Funcionário Ativo
+                    </span>
                   )}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {role === 'dono' && (
                   <button
                     onClick={() => setIsOwnerDashboardOpen(true)}
@@ -511,6 +584,17 @@ export default function App() {
                   >
                     <Sparkles className="w-3 h-3" />
                     <span>Painel do Dono</span>
+                  </button>
+                )}
+
+                {role !== 'dono' && currentEmployee && (
+                  <button
+                    onClick={handleEmployeeLogout}
+                    className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30 flex items-center gap-1 cursor-pointer hover:bg-rose-500/30 transition-colors"
+                    title="Sair da conta do funcionário"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    <span>Sair</span>
                   </button>
                 )}
 
@@ -536,6 +620,7 @@ export default function App() {
               appointments={appointments}
               settings={settings}
               role={role}
+              currentEmployee={currentEmployee}
               onUpdateStatus={handleUpdateStatus}
               onDeleteAppointment={handleDeleteAppointment}
               onOpenReceiptModal={(apt) => setSelectedReceiptApt(apt)}
@@ -551,7 +636,7 @@ export default function App() {
             settings={settings}
             appointments={appointments}
             onConfirmAppointment={handleConfirmAppointment}
-            onSwitchToStaff={() => setAppMode('funcionario')}
+            onSwitchToStaff={() => handleChangeMode('funcionario')}
             isClientOnly={isClientLink}
           />
         )}
@@ -601,6 +686,14 @@ export default function App() {
         isOpen={isOwnerPasswordOpen}
         onClose={() => setIsOwnerPasswordOpen(false)}
         onSuccess={handleOwnerPasswordSuccess}
+      />
+
+      {/* Employee Login Modal */}
+      <EmployeeLoginModal
+        isOpen={isEmployeeLoginOpen}
+        onClose={() => setIsEmployeeLoginOpen(false)}
+        employees={settings.employees}
+        onLogin={handleEmployeeLogin}
       />
 
       {/* Owner Dashboard Modal */}

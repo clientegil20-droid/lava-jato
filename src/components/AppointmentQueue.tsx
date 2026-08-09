@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Appointment, AppointmentStatus, PaymentMethod, StoreSettings, UserRole } from '../types';
+import { Appointment, AppointmentStatus, Employee, PaymentMethod, StoreSettings, UserRole } from '../types';
 import { formatBRL, buildReadyMessage, buildApprovalMessage, openWhatsApp } from '../utils/whatsapp';
 import {
   Calendar,
@@ -25,6 +25,7 @@ import {
   QrCode,
   CreditCard,
   Landmark,
+  UserCheck,
 } from 'lucide-react';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { ProductPickerModal } from './ProductPickerModal';
@@ -33,6 +34,7 @@ interface AppointmentQueueProps {
   appointments: Appointment[];
   settings: StoreSettings;
   role: UserRole;
+  currentEmployee?: Employee | null;
   onUpdateStatus: (
     id: string,
     newStatus: AppointmentStatus,
@@ -49,6 +51,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   appointments,
   settings,
   role,
+  currentEmployee,
   onUpdateStatus,
   onDeleteAppointment,
   onOpenReceiptModal,
@@ -285,7 +288,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
           {filtered.map((apt) => (
             <div
               key={apt.id}
@@ -346,6 +349,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                     <div className="text-cyan-400 font-mono mt-0.5 flex items-center gap-1">
                       <Phone className="w-3 h-3" />
                       {apt.customerPhone}
+                    </div>
+                  )}
+                  {(apt.employeeName || apt.completedBy) && (
+                    <div className="text-gray-500 text-[11px] mt-0.5 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3 text-emerald-400" />
+                      Responsável: {apt.completedBy ? settings.employees.find((e) => e.id === apt.completedBy)?.name ?? apt.employeeName : apt.employeeName}
                     </div>
                   )}
                 </div>
@@ -584,6 +593,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
         onClose={() => setPaymentApt(null)}
         appointment={paymentApt}
         employees={settings.employees.filter((e) => e.active)}
+        defaultEmployeeId={currentEmployee?.id}
         onConfirm={handlePaymentConfirm}
       />
 

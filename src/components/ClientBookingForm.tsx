@@ -189,7 +189,7 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl mx-auto pb-24">
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto pb-24">
       {/* Welcome Banner */}
       <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#1c2836] via-[#141d27] to-[#121215] border border-cyan-500/30 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />

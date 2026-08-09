@@ -149,6 +149,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   const handleSaveEmployee = () => {
     if (!employeeForm) return;
+    if (!employeeForm.name.trim() || !employeeForm.code.trim() || !employeeForm.password.trim()) {
+      alert('Preencha nome, código e senha do funcionário.');
+      return;
+    }
     const exists = settings.employees.some((e) => e.id === employeeForm.id);
     const next = exists
       ? settings.employees.map((e) => (e.id === employeeForm.id ? employeeForm : e))
@@ -190,7 +194,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-[#18181c] border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden my-auto">
+      <div className="relative w-full max-w-3xl md:max-w-5xl lg:max-w-6xl bg-[#18181c] border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden my-auto">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-[#1c2733] to-[#121921] border-b border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -518,6 +522,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                       id: `emp_${Date.now()}`,
                       name: '',
                       phone: '',
+                      code: '',
+                      password: '',
                       payModel: 'comissao',
                       salaryType: 'mensal',
                       salaryValue: 0,
@@ -573,6 +579,37 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           setEmployeeForm({ ...employeeForm, phone: e.target.value })
                         }
                         placeholder="(94) 99999-9999"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-gray-400 block mb-1">
+                        Código de Login *
+                      </label>
+                      <input
+                        type="text"
+                        value={employeeForm.code}
+                        onChange={(e) =>
+                          setEmployeeForm({ ...employeeForm, code: e.target.value })
+                        }
+                        placeholder="Ex: FUN001"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-400 block mb-1">
+                        Senha de Login *
+                      </label>
+                      <input
+                        type="text"
+                        value={employeeForm.password}
+                        onChange={(e) =>
+                          setEmployeeForm({ ...employeeForm, password: e.target.value })
+                        }
+                        placeholder="Senha para entrar no Painel"
                         className={inputCls}
                       />
                     </div>
@@ -698,7 +735,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     </label>
                     <button
                       onClick={handleSaveEmployee}
-                      disabled={!employeeForm.name.trim()}
+                      disabled={
+                        !employeeForm.name.trim() ||
+                        !employeeForm.code.trim() ||
+                        !employeeForm.password.trim()
+                      }
                       className="px-4 py-2 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs cursor-pointer disabled:opacity-40"
                     >
                       Salvar Funcionário
@@ -730,6 +771,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           <div>
                             <div className="font-bold text-white text-sm flex items-center gap-2">
                               {emp.name}
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-cyan-300 border border-gray-700 font-mono">
+                                {emp.code || 'sem código'}
+                              </span>
                               {!emp.active && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-500 border border-gray-700">
                                   Inativo
