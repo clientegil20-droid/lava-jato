@@ -143,6 +143,7 @@ export default function App() {
           ownerPassword: parsed.ownerPassword ?? DEFAULT_SETTINGS.ownerPassword,
           employees: parsed.employees ?? DEFAULT_SETTINGS.employees,
           expenses: parsed.expenses ?? DEFAULT_SETTINGS.expenses,
+          employeePayments: parsed.employeePayments ?? DEFAULT_SETTINGS.employeePayments,
         };
       }
     } catch (e) {
@@ -208,6 +209,10 @@ export default function App() {
             remoteSettings.ownerPassword ?? settings.ownerPassword ?? DEFAULT_SETTINGS.ownerPassword,
           employees: remoteSettings.employees ?? settings.employees ?? DEFAULT_SETTINGS.employees,
           expenses: remoteSettings.expenses ?? settings.expenses ?? DEFAULT_SETTINGS.expenses,
+          employeePayments:
+            remoteSettings.employeePayments ??
+            settings.employeePayments ??
+            DEFAULT_SETTINGS.employeePayments,
         };
         setSettings(next);
         try {

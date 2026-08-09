@@ -92,6 +92,7 @@ export interface Employee {
   // porcentagem: percentage of total sales
   percentValue?: number;
   active: boolean;
+  lastPaymentAt?: string; // ISO datetime of the last commission payment
 }
 
 export interface Expense {
@@ -100,6 +101,21 @@ export interface Expense {
   description: string;
   category: string;
   amount: number;
+}
+
+export interface EmployeePayment {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  washes: number;
+  revenue: number;
+  periodStart: string; // ISO date of the first unpaid wash included
+  periodEnd: string; // ISO date of the last unpaid wash included
+  paidAt: string; // ISO datetime
+  format: 'pdf' | 'excel';
+  signatureDataUrl?: string; // base64 image of the employee signature
+  employeeCode?: string;
 }
 
 export type UserRole = 'funcionario' | 'dono';
@@ -115,4 +131,5 @@ export interface StoreSettings {
   ownerPassword: string;
   employees: Employee[];
   expenses: Expense[];
+  employeePayments: EmployeePayment[];
 }

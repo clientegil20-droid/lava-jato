@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Appointment, Employee, Expense, PaymentMethod, StoreSettings } from '../types';
+import { Appointment, Employee, EmployeePayment, Expense, PaymentMethod, StoreSettings } from '../types';
 import { formatBRL } from '../utils/whatsapp';
+import { EmployeePaymentModal } from './EmployeePaymentModal';
 import {
   X,
   TrendingUp,
@@ -23,6 +24,7 @@ import {
   History,
   BarChart3,
   PiggyBank,
+  Banknote as BanknoteIcon,
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -67,6 +69,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [employeeForm, setEmployeeForm] = useState<Employee | null>(null);
   const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [payingEmployee, setPayingEmployee] = useState<Employee | null>(null);
 
   const delivered = appointments.filter((a) => a.status === 'entregue');
 
@@ -123,8 +126,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   // Employee calculations
   const computeEmployeeEarnings = (emp: Employee) => {
+    const cutoff = emp.lastPaymentAt ? new Date(emp.lastPaymentAt).getTime() : 0;
     const empWashes = delivered.filter(
-      (a) => a.completedBy === emp.id
+      (a) =>
+        a.completedBy === emp.id &&
+        new Date(a.paidAt || a.createdAt).getTime() > cutoff
     );
     const washCount = empWashes.length;
     const empRevenue = empWashes.reduce((s, a) => s + a.totalPrice, 0);
@@ -185,6 +191,22 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       ...settings,
       expenses: settings.expenses.filter((e) => e.id !== id),
     });
+  };
+
+  const handlePayEmployee = (
+    payment: EmployeePayment,
+    _format: 'pdf' | 'excel'
+  ) => {
+    const now = new Date().toISOString();
+    const employees = settings.employees.map((e) =>
+      e.id === payment.employeeId ? { ...e, lastPaymentAt: now } : e
+    );
+    onSaveSettings({
+      ...settings,
+      employees,
+      employeePayments: [...(settings.employeePayments || []), payment],
+    });
+    setPayingEmployee(null);
   };
 
   const inputCls =
@@ -829,10 +851,82 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           <div className="text-[9px] text-gray-600">{earnings.label}</div>
                         </div>
                       </div>
+
+                      <button
+                        onClick={() => setPayingEmployee(emp)}
+                        disabled={earnings.value <= 0}
+                        className="w-full px-3 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={
+                          earnings.value <= 0
+                            ? 'Nenhum valor pendente para este funcionário'
+                            : 'Gerar comprovante (PDF/Excel) e registrar o pagamento'
+                        }
+                      >
+                        <BanknoteIcon className="w-3.5 h-3.5" />
+                        Pagar Funcionário
+                        <span className="text-[10px] font-bold text-emerald-400/80">
+                          ({formatBRL(earnings.value)})
+                        </span>
+                      </button>
                     </div>
                   );
                 })
               )}
+            </div>
+          )}
+
+          {/* Payment history */}
+          {(settings.employeePayments?.length || 0) > 0 && (
+            <div className="pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <History className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-white uppercase tracking-wide">
+                  Histórico de Pagamentos
+                </span>
+              </div>
+              <div className="space-y-2">
+                {[...settings.employeePayments]
+                  .sort((a, b) => b.paidAt.localeCompare(a.paidAt))
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="p-3 rounded-xl bg-[#121215] border border-gray-800 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-xs border border-emerald-500/30 shrink-0">
+                          {p.employeeName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-xs truncate">
+                            {p.employeeName}
+                            {p.employeeCode && (
+                              <span className="ml-1.5 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-cyan-300 border border-gray-700 font-mono">
+                                {p.employeeCode}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-400">
+                            {new Date(p.paidAt).toLocaleDateString('pt-BR')} às{' '}
+                            {new Date(p.paidAt).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            {' • '}
+                            {p.washes} lavagens • {p.format === 'pdf' ? 'PDF' : 'Excel'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-black text-emerald-300 text-sm">
+                          {formatBRL(p.amount)}
+                        </div>
+                        <div className="text-[9px] text-gray-600">
+                          vendas {formatBRL(p.revenue)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
 
@@ -1022,6 +1116,40 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           )}
         </div>
       </div>
+
+      {/* ============ PAY EMPLOYEE MODAL ============ */}
+      {payingEmployee && (
+        <EmployeePaymentModal
+          isOpen
+          onClose={() => setPayingEmployee(null)}
+          employee={payingEmployee}
+          washes={delivered
+            .filter((a) => {
+              const cutoff = payingEmployee.lastPaymentAt
+                ? new Date(payingEmployee.lastPaymentAt).getTime()
+                : 0;
+              return (
+                a.completedBy === payingEmployee.id &&
+                new Date(a.paidAt || a.createdAt).getTime() > cutoff
+              );
+            })
+            .map((a) => ({
+              carModel: a.carModel,
+              washName: a.washName,
+              date: a.paidAt || a.createdAt,
+              totalPrice: a.totalPrice,
+            }))}
+          amount={computeEmployeeEarnings(payingEmployee).value}
+          washCount={computeEmployeeEarnings(payingEmployee).washCount}
+          revenue={computeEmployeeEarnings(payingEmployee).empRevenue}
+          periodStart={
+            payingEmployee.lastPaymentAt || delivered[0]?.createdAt || new Date().toISOString()
+          }
+          periodEnd={new Date().toISOString()}
+          storeName={settings.storeName}
+          onConfirm={handlePayEmployee}
+        />
+      )}
     </div>
   );
 };

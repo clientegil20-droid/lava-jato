@@ -68,6 +68,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   ownerPassword: 'G9491',
   employees: [],
   expenses: [],
+  employeePayments: [],
   priceMatrix: {
     moto: { simples: 22, completa: 35, detalhada: 55 },
     hatch: { simples: 40, completa: 55, detalhada: 105 },
