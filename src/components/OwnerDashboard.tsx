@@ -68,8 +68,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
 
-  if (!isOpen) return null;
-
   const delivered = appointments.filter((a) => a.status === 'entregue');
 
   const filtered = useMemo(() => {
@@ -187,6 +185,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
   const inputCls =
     'w-full px-3 py-2 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs focus:border-cyan-400 focus:outline-none';
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
