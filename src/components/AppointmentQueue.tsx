@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { ProductPickerModal } from './ProductPickerModal';
+import { EmployeeAssignmentModal } from './EmployeeAssignmentModal';
 
 interface AppointmentQueueProps {
   appointments: Appointment[];
@@ -62,6 +63,9 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentApt, setPaymentApt] = useState<Appointment | null>(null);
   const [productApt, setProductApt] = useState<Appointment | null>(null);
+  const [assignApt, setAssignApt] = useState<Appointment | null>(null);
+  const [assignTarget, setAssignTarget] = useState<'pronto' | 'entregue' | null>(null);
+  const [assignEmployeeId, setAssignEmployeeId] = useState<string | null>(null);
 
   const isOwner = role === 'dono';
 
@@ -174,18 +178,38 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   };
 
   const handleStatusChange = (apt: Appointment, newStatus: AppointmentStatus) => {
-    if (newStatus === 'entregue') {
-      setPaymentApt(apt);
+    // "Pronto" and "Entregue" require confirming who washed the vehicle
+    if (newStatus === 'pronto' || newStatus === 'entregue') {
+      setAssignApt(apt);
+      setAssignTarget(newStatus);
+      setAssignEmployeeId(currentEmployee?.id ?? null);
       return;
     }
     onUpdateStatus(apt.id, newStatus);
   };
 
+  const handleAssignConfirm = (employeeId: string) => {
+    if (!assignApt || !assignTarget) return;
+    // If the target is "entregue", also ask for the payment method
+    if (assignTarget === 'entregue') {
+      setPaymentApt(assignApt);
+      setAssignEmployeeId(employeeId);
+      setAssignApt(null);
+      setAssignTarget(null);
+      return;
+    }
+    onUpdateStatus(assignApt.id, 'pronto', undefined, employeeId);
+    setAssignApt(null);
+    setAssignTarget(null);
+  };
+
   const handlePaymentConfirm = (method: PaymentMethod, completedBy?: string) => {
     if (paymentApt) {
-      onUpdateStatus(paymentApt.id, 'entregue', method, completedBy);
+      const responsibleId = completedBy || assignEmployeeId || undefined;
+      onUpdateStatus(paymentApt.id, 'entregue', method, responsibleId);
     }
     setPaymentApt(null);
+    setAssignEmployeeId(null);
   };
 
   const isStatusChangeFree = (apt: Appointment) => {
@@ -590,11 +614,29 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
       {/* Payment method modal when finalizing */}
       <PaymentMethodModal
         isOpen={paymentApt !== null}
-        onClose={() => setPaymentApt(null)}
+        onClose={() => {
+          setPaymentApt(null);
+          setAssignEmployeeId(null);
+        }}
         appointment={paymentApt}
         employees={settings.employees.filter((e) => e.active)}
-        defaultEmployeeId={currentEmployee?.id}
+        defaultEmployeeId={assignEmployeeId ?? currentEmployee?.id}
         onConfirm={handlePaymentConfirm}
+      />
+
+      {/* Employee assignment modal (who washed the vehicle) */}
+      <EmployeeAssignmentModal
+        isOpen={assignApt !== null}
+        onClose={() => {
+          setAssignApt(null);
+          setAssignTarget(null);
+          setAssignEmployeeId(null);
+        }}
+        appointment={assignApt}
+        targetStatus={assignTarget}
+        employees={settings.employees.filter((e) => e.active)}
+        defaultEmployeeId={assignEmployeeId ?? currentEmployee?.id}
+        onConfirm={handleAssignConfirm}
       />
 
       {/* Product picker modal */}
