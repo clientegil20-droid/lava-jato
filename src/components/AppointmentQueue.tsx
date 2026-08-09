@@ -66,6 +66,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   const [assignApt, setAssignApt] = useState<Appointment | null>(null);
   const [assignTarget, setAssignTarget] = useState<'pronto' | 'entregue' | null>(null);
   const [assignEmployeeId, setAssignEmployeeId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<Record<string, AppointmentStatus>>({});
 
   const isOwner = role === 'dono';
 
@@ -212,9 +213,17 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
     setAssignEmployeeId(null);
   };
 
-  const isStatusChangeFree = (apt: Appointment) => {
+  const isStatusChangeFree = (apt: Appointment, newStatus: AppointmentStatus) => {
     if (isOwner) return true;
-    return (apt.statusChangeCount || 0) === 0;
+    const STATUS_RANK: Record<AppointmentStatus, number> = {
+      agendado: 0,
+      aprovado: 1,
+      em_lavagem: 2,
+      pronto: 3,
+      entregue: 4,
+      cancelado: -1,
+    };
+    return STATUS_RANK[newStatus] > STATUS_RANK[apt.status];
   };
 
   return (
@@ -236,7 +245,7 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           <p className="text-xs text-gray-400 mt-0.5">
             {isOwner
               ? 'Modo dono: liberado para alterar status livremente, editar e excluir'
-              : 'Funcionário: 1ª mudança de status livre, demais aguardam aprovação do dono'}
+              : 'Funcionário: avançar no fluxo da lavagem é livre; voltar ou cancelar exige aprovação do dono'}
           </p>
         </div>
 
@@ -427,10 +436,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400 hidden sm:inline">Mudar Status:</span>
                   <select
-                    value={apt.status}
-                    onChange={(e) =>
-                      handleStatusChange(apt, e.target.value as AppointmentStatus)
-                    }
+                    value={selectedStatus[apt.id] ?? apt.status}
+                    onChange={(e) => {
+                      const next = e.target.value as AppointmentStatus;
+                      setSelectedStatus((prev) => ({ ...prev, [apt.id]: next }));
+                      handleStatusChange(apt, next);
+                    }}
                     disabled={!isOwner && !!apt.pendingStatusChange}
                     className="px-2.5 py-1.5 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs font-semibold focus:border-cyan-400 focus:outline-none cursor-pointer disabled:opacity-40"
                   >
@@ -444,9 +455,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
 
                   {!isOwner && !apt.pendingStatusChange && (
                     <span className="text-[10px] text-gray-500 font-semibold">
-                      {isStatusChangeFree(apt) ? (
+                      {isStatusChangeFree(
+                        apt,
+                        selectedStatus[apt.id] ?? apt.status
+                      ) ? (
                         <span className="text-emerald-400 flex items-center gap-0.5">
-                          <LockOpen className="w-3 h-3" /> livre (1ª)
+                          <LockOpen className="w-3 h-3" /> livre
                         </span>
                       ) : (
                         <span className="text-amber-400 flex items-center gap-0.5">
@@ -631,6 +645,9 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           setAssignApt(null);
           setAssignTarget(null);
           setAssignEmployeeId(null);
+          if (assignApt) {
+            setSelectedStatus((prev) => ({ ...prev, [assignApt.id]: assignApt.status }));
+          }
         }}
         appointment={assignApt}
         targetStatus={assignTarget}

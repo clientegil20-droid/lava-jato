@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Appointment, AppointmentStatus, Employee, PaymentMethod, StoreSettings, UserRole, VehicleId, WashId, LOCAL_STORAGE_EMPLOYEE_KEY } from './types';
+
+const STATUS_RANK: Record<AppointmentStatus, number> = {
+  agendado: 0,
+  aprovado: 1,
+  em_lavagem: 2,
+  pronto: 3,
+  entregue: 4,
+  cancelado: -1,
+};
+
+const isForwardStatusChange = (from: AppointmentStatus, to: AppointmentStatus) =>
+  STATUS_RANK[to] > STATUS_RANK[from];
 import { DEFAULT_SETTINGS, DEFAULT_VEHICLES, DEFAULT_WASHES } from './data/defaultData';
 import { buildReceiptMessage, openWhatsApp } from './utils/whatsapp';
 import {
@@ -332,9 +344,8 @@ export default function App() {
     } else {
       updated = appointments.map((apt) => {
         if (apt.id !== id) return apt;
-        const count = apt.statusChangeCount || 0;
-        if (count === 0) {
-          // First status change is free
+        if (isForwardStatusChange(apt.status, newStatus)) {
+          // Forward progress in the wash flow is always free
           return {
             ...apt,
             status: newStatus,
@@ -343,10 +354,10 @@ export default function App() {
             completedBy: actingEmployeeId ?? apt.completedBy,
             employeeName: actingEmployeeName ?? apt.employeeName,
             pendingStatusChange: null,
-            statusChangeCount: 1,
+            statusChangeCount: (apt.statusChangeCount || 0) + 1,
           };
         }
-        // Subsequent changes need owner approval
+        // Backward/repeated changes need owner approval
         return {
           ...apt,
           pendingStatusChange: newStatus,
