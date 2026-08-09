@@ -119,12 +119,13 @@ export default function App() {
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_APPOINTMENTS_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return parsed.filter((a: Appointment) => !a.id.startsWith('apt_sample_'));
       }
     } catch (e) {
       console.error('Failed to load appointments', e);
     }
-    return SAMPLE_APPOINTMENTS;
+    return isSupabaseConfigured ? [] : SAMPLE_APPOINTMENTS;
   });
 
   // User Selections for Orçamento
@@ -162,34 +163,41 @@ export default function App() {
       if (cancelled) return;
 
       if (remoteSettings) {
-        setSettings((prev) => {
-          const next = { ...DEFAULT_SETTINGS, ...prev, ...remoteSettings };
-          try {
-            localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(next));
-          } catch (e) {
-            console.error('Failed to cache settings', e);
-          }
-          return next;
-        });
+        const next = { ...DEFAULT_SETTINGS, ...settings, ...remoteSettings };
+        setSettings(next);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(next));
+        } catch (e) {
+          console.error('Failed to cache settings', e);
+        }
       } else {
         upsertSettings(settings);
       }
 
       if (remoteAppointments) {
-        setAppointments((prev) => {
-          if (remoteAppointments.length === 0 && prev.length > 0) {
-            remoteAppointments.forEach((apt) => upsertAppointment(apt));
-            return prev;
-          }
-          const merged = [...prev.filter((a) => !remoteAppointments.some((r) => r.id === a.id)), ...remoteAppointments];
+        if (remoteAppointments.length === 0) {
+          // Remote DB is empty: push up any real local appointments so they persist
+          appointments.forEach((apt) => upsertAppointment(apt));
+        } else {
+          // Merge local-only appointments with the remote list (remote wins on conflicts)
+          const merged = [
+            ...appointments.filter(
+              (a) => !remoteAppointments.some((r) => r.id === a.id)
+            ),
+            ...remoteAppointments,
+          ];
+          setAppointments(merged);
           try {
-            localStorage.setItem(LOCAL_STORAGE_APPOINTMENTS_KEY, JSON.stringify(merged));
+            localStorage.setItem(
+              LOCAL_STORAGE_APPOINTMENTS_KEY,
+              JSON.stringify(merged)
+            );
           } catch (e) {
             console.error('Failed to cache appointments', e);
           }
-          return merged;
-        });
+        }
       } else {
+        // Remote fetch failed: keep local data and try to sync it up
         appointments.forEach((apt) => upsertAppointment(apt));
       }
     };

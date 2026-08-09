@@ -17,7 +17,7 @@ export async function fetchAppointments(): Promise<Appointment[] | null> {
 
   const { data, error } = await supabase!
     .from('appointments')
-    .select('data')
+    .select('id, status, data')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -25,7 +25,13 @@ export async function fetchAppointments(): Promise<Appointment[] | null> {
     return null;
   }
 
-  return (data as AppointmentRow[] | null)?.map((row) => row.data) ?? [];
+  return (
+    (data as AppointmentRow[] | null)?.map((row) => ({
+      ...row.data,
+      id: row.id,
+      status: row.status as Appointment['status'],
+    })) ?? []
+  );
 }
 
 export async function upsertAppointment(appointment: Appointment): Promise<void> {
@@ -52,9 +58,19 @@ export async function updateAppointmentStatus(
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
 
+  const { data: existing } = await supabase!
+    .from('appointments')
+    .select('data')
+    .eq('id', id)
+    .maybeSingle();
+
+  const updatedData = existing?.data
+    ? { ...(existing.data as Appointment), status }
+    : undefined;
+
   const { error } = await supabase!
     .from('appointments')
-    .update({ status })
+    .update({ status, data: updatedData ?? undefined })
     .eq('id', id);
 
   if (error) console.error('Supabase update status error', error);
