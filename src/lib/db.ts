@@ -54,7 +54,8 @@ export async function upsertAppointment(appointment: Appointment): Promise<void>
 
 export async function updateAppointmentStatus(
   id: string,
-  status: AppointmentStatus
+  status: AppointmentStatus,
+  extraData?: Partial<Appointment>
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
 
@@ -65,7 +66,7 @@ export async function updateAppointmentStatus(
     .maybeSingle();
 
   const updatedData = existing?.data
-    ? { ...(existing.data as Appointment), status }
+    ? { ...(existing.data as Appointment), status, ...extraData }
     : undefined;
 
   const { error } = await supabase!

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Appointment, AppointmentStatus, StoreSettings } from '../types';
+import { Appointment, AppointmentStatus, PaymentMethod, StoreSettings, UserRole } from '../types';
 import { formatBRL, buildReadyMessage, buildApprovalMessage, openWhatsApp } from '../utils/whatsapp';
 import {
   Calendar,
@@ -18,27 +18,63 @@ import {
   Filter,
   History,
   X,
+  ShoppingCart,
+  Lock,
+  LockOpen,
+  Banknote,
+  QrCode,
+  CreditCard,
+  Landmark,
 } from 'lucide-react';
+import { PaymentMethodModal } from './PaymentMethodModal';
+import { ProductPickerModal } from './ProductPickerModal';
 
 interface AppointmentQueueProps {
   appointments: Appointment[];
   settings: StoreSettings;
-  onUpdateStatus: (id: string, newStatus: AppointmentStatus) => void;
+  role: UserRole;
+  onUpdateStatus: (
+    id: string,
+    newStatus: AppointmentStatus,
+    paymentMethod?: PaymentMethod,
+    completedBy?: string
+  ) => void;
   onDeleteAppointment: (id: string) => void;
   onOpenReceiptModal: (apt: Appointment) => void;
   onCreateNewClick: () => void;
+  onAddProducts: (id: string, extraIds: string[]) => void;
 }
 
 export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   appointments,
   settings,
+  role,
   onUpdateStatus,
   onDeleteAppointment,
   onOpenReceiptModal,
   onCreateNewClick,
+  onAddProducts,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [paymentApt, setPaymentApt] = useState<Appointment | null>(null);
+  const [productApt, setProductApt] = useState<Appointment | null>(null);
+
+  const isOwner = role === 'dono';
+
+  const METHOD_LABELS: Record<PaymentMethod, string> = {
+    dinheiro: 'Dinheiro',
+    pix: 'Pix',
+    credito: 'Cartão de Crédito',
+    debito: 'Cartão de Débito',
+  };
+
+  const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
+    dinheiro: <Banknote className="w-3 h-3" />,
+    pix: <QrCode className="w-3 h-3" />,
+    credito: <CreditCard className="w-3 h-3" />,
+    debito: <Landmark className="w-3 h-3" />,
+  };
 
   const getStatusBadge = (status: AppointmentStatus) => {
     switch (status) {
@@ -134,6 +170,26 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
     openWhatsApp(apt.customerPhone || settings.whatsappPhone, msg);
   };
 
+  const handleStatusChange = (apt: Appointment, newStatus: AppointmentStatus) => {
+    if (newStatus === 'entregue') {
+      setPaymentApt(apt);
+      return;
+    }
+    onUpdateStatus(apt.id, newStatus);
+  };
+
+  const handlePaymentConfirm = (method: PaymentMethod, completedBy?: string) => {
+    if (paymentApt) {
+      onUpdateStatus(paymentApt.id, 'entregue', method, completedBy);
+    }
+    setPaymentApt(null);
+  };
+
+  const isStatusChangeFree = (apt: Appointment) => {
+    if (isOwner) return true;
+    return (apt.statusChangeCount || 0) === 0;
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Quick Add for Employee */}
@@ -151,7 +207,9 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
             Fila de Agendamentos & Controle de Lavagens
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Gerencie o status da lavagem e envie o comprovante ao cliente no WhatsApp
+            {isOwner
+              ? 'Modo dono: liberado para alterar status livremente, editar e excluir'
+              : 'Funcionário: 1ª mudança de status livre, demais aguardam aprovação do dono'}
           </p>
         </div>
 
@@ -235,6 +293,23 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                 apt.status
               )} transition-all space-y-4 shadow-lg relative overflow-hidden`}
             >
+              {/* Pending approval banner */}
+              {!isOwner && apt.pendingStatusChange && (
+                <div className="absolute top-0 left-0 right-0 py-1.5 px-4 bg-amber-500/20 border-b border-amber-500/40 text-amber-300 text-[11px] font-bold flex items-center justify-center gap-1.5">
+                  <Lock className="w-3 h-3" />
+                  Aguardando aprovação do dono: mudar para{' '}
+                  {apt.pendingStatusChange === 'entregue'
+                    ? 'Concluído'
+                    : apt.pendingStatusChange === 'em_lavagem'
+                    ? 'Em Lavagem'
+                    : apt.pendingStatusChange === 'pronto'
+                    ? 'Pronto'
+                    : apt.pendingStatusChange === 'aprovado'
+                    ? 'Aprovado'
+                    : 'Cancelado'}
+                </div>
+              )}
+
               {/* Top Row: Code, Status & Date */}
               <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-800">
                 <div className="flex items-center gap-2">
@@ -242,6 +317,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                     {apt.code}
                   </span>
                   {getStatusBadge(apt.status)}
+                  {apt.paymentMethod && apt.status === 'entregue' && (
+                    <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      {METHOD_ICONS[apt.paymentMethod]}
+                      {METHOD_LABELS[apt.paymentMethod]}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
@@ -315,9 +396,10 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                   <select
                     value={apt.status}
                     onChange={(e) =>
-                      onUpdateStatus(apt.id, e.target.value as AppointmentStatus)
+                      handleStatusChange(apt, e.target.value as AppointmentStatus)
                     }
-                    className="px-2.5 py-1.5 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs font-semibold focus:border-cyan-400 focus:outline-none cursor-pointer"
+                    disabled={!isOwner && !!apt.pendingStatusChange}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs font-semibold focus:border-cyan-400 focus:outline-none cursor-pointer disabled:opacity-40"
                   >
                     <option value="agendado">🕒 Agendado</option>
                     <option value="aprovado">✅ Aprovado</option>
@@ -326,6 +408,20 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                     <option value="entregue">✅ Entregue / Concluído</option>
                     <option value="cancelado">❌ Cancelado</option>
                   </select>
+
+                  {!isOwner && !apt.pendingStatusChange && (
+                    <span className="text-[10px] text-gray-500 font-semibold">
+                      {isStatusChangeFree(apt) ? (
+                        <span className="text-emerald-400 flex items-center gap-0.5">
+                          <LockOpen className="w-3 h-3" /> livre (1ª)
+                        </span>
+                      ) : (
+                        <span className="text-amber-400 flex items-center gap-0.5">
+                          <Lock className="w-3 h-3" /> precisa aprovação
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 {/* Buttons: Approve, Send Comprovante & Send Ready Notification */}
@@ -353,6 +449,15 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                   )}
 
                   <button
+                    onClick={() => setProductApt(apt)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                    title="Adicionar produto/serviço adicional a este agendamento"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    <span>+ Produto</span>
+                  </button>
+
+                  <button
                     onClick={() => onOpenReceiptModal(apt)}
                     className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
                     title="Ver e Enviar Comprovante do Agendamento ao Cliente"
@@ -361,17 +466,19 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                     <span>Ver Comprovante</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      if (confirm('Deseja excluir este agendamento da lista?')) {
-                        onDeleteAppointment(apt.id);
-                      }
-                    }}
-                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                    title="Excluir Agendamento"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        if (confirm('Deseja excluir este agendamento da lista?')) {
+                          onDeleteAppointment(apt.id);
+                        }
+                      }}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Excluir Agendamento"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -443,6 +550,13 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {apt.paymentMethod && (
+                    <div className="text-[10px] text-emerald-300 flex items-center gap-1">
+                      {METHOD_ICONS[apt.paymentMethod]}
+                      {METHOD_LABELS[apt.paymentMethod]}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-800/80 mt-auto">
@@ -463,6 +577,27 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           </div>
         )}
       </div>
+
+      {/* Payment method modal when finalizing */}
+      <PaymentMethodModal
+        isOpen={paymentApt !== null}
+        onClose={() => setPaymentApt(null)}
+        appointment={paymentApt}
+        employees={settings.employees.filter((e) => e.active)}
+        onConfirm={handlePaymentConfirm}
+      />
+
+      {/* Product picker modal */}
+      <ProductPickerModal
+        isOpen={productApt !== null}
+        onClose={() => setProductApt(null)}
+        appointment={productApt}
+        products={settings.extraServices}
+        onConfirm={(extraIds) => {
+          if (productApt) onAddProducts(productApt.id, extraIds);
+          setProductApt(null);
+        }}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
-import { StoreSettings } from '../types';
-import { Settings, MapPin, PhoneCall, User, Wrench, Link } from 'lucide-react';
+import { StoreSettings, UserRole } from '../types';
+import { Settings, MapPin, PhoneCall, User, Wrench, Link, Lock, Unlock } from 'lucide-react';
 
 interface HeaderProps {
   settings: StoreSettings;
@@ -10,6 +10,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onOpenShareLink?: () => void;
   isClientOnly?: boolean;
+  role?: UserRole;
+  onRequestOwnerAccess?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,7 +22,11 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onOpenShareLink,
   isClientOnly = false,
+  role = 'funcionario',
+  onRequestOwnerAccess,
 }) => {
+  const isOwner = role === 'dono';
+
   return (
     <header className="relative bg-gradient-to-b from-[#1a232e] via-[#121214] to-[#121214] pt-6 pb-6 px-4 border-b border-cyan-500/20">
       <div className="max-w-2xl mx-auto text-center relative">
@@ -72,15 +78,37 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            <button
-              onClick={onOpenSettings}
-              id="admin-settings-btn"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1d1d22] hover:bg-[#282830] border border-gray-700 text-xs font-semibold text-gray-300 transition-colors shadow-sm cursor-pointer"
-              title="Configurações do Lava Jato (Preços e WhatsApp)"
-            >
-              <Settings className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Editar Preços</span>
-            </button>
+            {isOwner ? (
+              <button
+                onClick={onRequestOwnerAccess}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-bold text-emerald-300 transition-colors shadow-sm cursor-pointer"
+                title="Painel do Dono desbloqueado. Clique para bloquear."
+              >
+                <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Dono</span>
+              </button>
+            ) : (
+              <button
+                onClick={onRequestOwnerAccess}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/40 text-xs font-bold text-violet-300 transition-colors shadow-sm cursor-pointer"
+                title="Área do Dono (exige senha)"
+              >
+                <Lock className="w-3.5 h-3.5 text-violet-400" />
+                <span className="hidden sm:inline">Dono</span>
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                onClick={onOpenSettings}
+                id="admin-settings-btn"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1d1d22] hover:bg-[#282830] border border-gray-700 text-xs font-semibold text-gray-300 transition-colors shadow-sm cursor-pointer"
+                title="Configurações do Lava Jato (Preços e WhatsApp) - só do dono"
+              >
+                <Settings className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Editar Preços</span>
+              </button>
+            )}
           </div>
         </div>
         )}

@@ -65,6 +65,9 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   subtitle: 'Monte seu serviço e faça seu agendamento em segundos',
   address: 'R. Olga Lustosa, 66 - Aripuanã, Redenção - PA, 68554-133',
   openingHours: 'Seg a Sáb: 07:30 - 18:00',
+  ownerPassword: 'G9491',
+  employees: [],
+  expenses: [],
   priceMatrix: {
     moto: { simples: 22, completa: 35, detalhada: 55 },
     hatch: { simples: 40, completa: 55, detalhada: 105 },

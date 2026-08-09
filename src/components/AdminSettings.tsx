@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ExtraService, PriceMatrix, StoreSettings, VehicleId, WashId } from '../types';
 import { DEFAULT_VEHICLES, DEFAULT_WASHES } from '../data/defaultData';
-import { X, Save, RotateCcw, Phone, DollarSign, Store, Plus, Trash2, Check } from 'lucide-react';
+import { X, Save, RotateCcw, Phone, DollarSign, Store, Plus, Trash2, Check, Lock } from 'lucide-react';
 
 interface AdminSettingsProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
   onResetDefaults,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>(settings);
-  const [activeTab, setActiveTab] = useState<'general' | 'matrix' | 'extras'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'matrix' | 'extras' | 'security'>('general');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   if (!isOpen) return null;
@@ -137,7 +137,17 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                 : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
-            Serviços Adicionais
+            Produtos & Serviços
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`px-4 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+              activeTab === 'security'
+                ? 'border-cyan-400 text-cyan-400'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Segurança
           </button>
         </div>
 
@@ -355,6 +365,35 @@ export const AdminSettings: React.FC<AdminSettingsProps> = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="space-y-4">
+              <div className="p-3.5 rounded-xl bg-violet-950/40 border border-violet-500/20 text-xs text-violet-200">
+                🔒 <strong>Segurança:</strong> A senha abaixo protege o acesso ao
+                Painel do Dono (ganhos, comissões, despesas, aprovações e esta
+                tela de configurações). Funcionários não a veem.
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-violet-400" />
+                  Senha do Dono
+                </label>
+                <input
+                  type="text"
+                  value={formData.ownerPassword}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ownerPassword: e.target.value })
+                  }
+                  placeholder="Digite a senha do dono"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#121215] border border-gray-700 text-white font-mono text-sm focus:border-violet-400 focus:outline-none"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Padrão: <code className="text-violet-400">G9491</code>. Troque por uma senha forte.
+                </p>
               </div>
             </div>
           )}

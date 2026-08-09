@@ -43,6 +43,8 @@ export interface CustomerData {
 
 export type AppointmentStatus = 'agendado' | 'aprovado' | 'em_lavagem' | 'pronto' | 'entregue' | 'cancelado';
 
+export type PaymentMethod = 'dinheiro' | 'pix' | 'credito' | 'debito';
+
 export interface Appointment {
   id: string;
   code: string; // e.g. #101
@@ -63,7 +65,38 @@ export interface Appointment {
   notes?: string;
   status: AppointmentStatus;
   createdBy: 'cliente' | 'funcionario';
+  paymentMethod?: PaymentMethod;
+  paidAt?: string;
+  completedBy?: string; // employee name/phone
+  statusChangeCount?: number; // how many times the status was changed
+  pendingStatusChange?: AppointmentStatus | null; // status requested by employee, awaiting owner approval
 }
+
+export interface Employee {
+  id: string;
+  name: string;
+  phone: string;
+  // Compensation model
+  payModel: 'salario' | 'comissao' | 'porcentagem';
+  // salario: monthly or daily fixed
+  salaryType?: 'mensal' | 'diario';
+  salaryValue?: number;
+  // comissao: value per wash
+  perWashValue?: number;
+  // porcentagem: percentage of total sales
+  percentValue?: number;
+  active: boolean;
+}
+
+export interface Expense {
+  id: string;
+  date: string; // ISO yyyy-mm-dd
+  description: string;
+  category: string;
+  amount: number;
+}
+
+export type UserRole = 'funcionario' | 'dono';
 
 export interface StoreSettings {
   whatsappPhone: string;
@@ -73,4 +106,7 @@ export interface StoreSettings {
   openingHours: string;
   priceMatrix: PriceMatrix;
   extraServices: ExtraService[];
+  ownerPassword: string;
+  employees: Employee[];
+  expenses: Expense[];
 }
