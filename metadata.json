@@ -1,0 +1,8 @@
+{
+  "name": "Remix Cardápio Digital - Lava Jato Redenção",
+  "description": "Cardápio digital e sistema de agendamento interativo para Lava Jato Redenção com seleção de veículo, lavagens, serviços adicionais, cálculo em tempo real e envio de pedido via WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
