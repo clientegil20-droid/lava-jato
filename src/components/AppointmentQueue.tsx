@@ -72,6 +72,10 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   const PENDING_STATUSES: AppointmentStatus[] = ['agendado', 'aprovado', 'em_lavagem'];
   const HISTORY_STATUSES: AppointmentStatus[] = ['pronto', 'entregue'];
 
+  const pendingCount = appointments.filter((apt) =>
+    PENDING_STATUSES.includes(apt.status)
+  ).length;
+
   const METHOD_LABELS: Record<PaymentMethod, string> = {
     dinheiro: 'Dinheiro',
     pix: 'Pix',
@@ -243,9 +247,11 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
             <span className="px-2.5 py-0.5 rounded-full bg-cyan-400 text-black font-extrabold text-[10px] uppercase">
               Painel do Funcionário
             </span>
-            <span className="text-xs text-cyan-300 font-medium">
-              {appointments.length} lavagens registradas
-            </span>
+            {pendingCount > 0 && (
+              <span className="text-xs text-cyan-300 font-medium">
+                {pendingCount} {pendingCount === 1 ? 'veículo' : 'veículos'} para lavar
+              </span>
+            )}
           </div>
           <h2 className="text-lg sm:text-xl font-extrabold text-white mt-1">
             Fila de Agendamentos & Controle de Lavagens

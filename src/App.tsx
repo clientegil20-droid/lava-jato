@@ -34,7 +34,7 @@ import { ClientBookingForm } from './components/ClientBookingForm';
 import { OwnerPasswordModal } from './components/OwnerPasswordModal';
 import { OwnerDashboard } from './components/OwnerDashboard';
 import { EmployeeLoginModal } from './components/EmployeeLoginModal';
-import { Share2, RotateCcw, HelpCircle, Wrench, User, Link as LinkIcon, Sparkles, Lock, LogOut, X } from 'lucide-react';
+import { Share2, RotateCcw, HelpCircle, Wrench, User, Sparkles, X } from 'lucide-react';
 
 const SAMPLE_APPOINTMENTS: Appointment[] = [
   {
@@ -583,7 +583,9 @@ export default function App() {
         settings={settings}
         appMode={appMode}
         onChangeMode={handleChangeMode}
-        appointmentCount={appointments.length}
+        appointmentCount={appointments.filter((a) =>
+          ['agendado', 'aprovado', 'em_lavagem'].includes(a.status)
+        ).length}
         onOpenSettings={() => setIsAdminOpen(true)}
         onOpenShareLink={() => setIsShareOpen(true)}
         isClientOnly={isClientLink}
@@ -599,26 +601,22 @@ export default function App() {
         {appMode === 'funcionario' ? (
           /* Staff View */
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-[#1d1d22] border border-gray-800">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-bold text-gray-200">
-                  {role === 'dono' ? (
-                    <span className="flex items-center gap-1.5 text-emerald-300">
-                      <Lock className="w-3.5 h-3.5" />
-                      Modo Dono Desbloqueado
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-cyan-300">👤 {currentEmployee?.name}</span>
-                      <span className="text-gray-500">•</span>
-                      Funcionário Ativo
-                    </span>
-                  )}
+            <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-[#1d1d22] border border-gray-800">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Wrench className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="text-xs font-bold text-gray-200 truncate">
+                  {settings.storeName}
                 </span>
+                {role === 'dono' ? (
+                  <span className="text-[11px] font-bold text-emerald-300 shrink-0">• Dono</span>
+                ) : (
+                  <span className="text-[11px] font-bold text-cyan-300 shrink-0">
+                    • {currentEmployee?.name}
+                  </span>
+                )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {role === 'dono' && (
                   <button
                     onClick={() => setIsOwnerDashboardOpen(true)}
@@ -629,30 +627,11 @@ export default function App() {
                   </button>
                 )}
 
-                {role !== 'dono' && currentEmployee && (
-                  <button
-                    onClick={handleEmployeeLogout}
-                    className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold border border-rose-500/30 flex items-center gap-1 cursor-pointer hover:bg-rose-500/30 transition-colors"
-                    title="Sair da conta do funcionário"
-                  >
-                    <LogOut className="w-3 h-3" />
-                    <span>Sair</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setIsShareOpen(true)}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 flex items-center gap-1 cursor-pointer hover:bg-emerald-500/30 transition-colors"
-                >
-                  <LinkIcon className="w-3 h-3" />
-                  <span>Enviar Link ao Cliente</span>
-                </button>
-
                 <button
                   onClick={() => setAppMode('cliente')}
-                  className="text-xs font-semibold text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 text-xs font-bold border border-cyan-500/30 flex items-center gap-1 cursor-pointer hover:bg-cyan-500/25 transition-colors"
                 >
-                  <User className="w-3.5 h-3.5" />
+                  <User className="w-3 h-3" />
                   <span>Ver Cardápio</span>
                 </button>
               </div>
