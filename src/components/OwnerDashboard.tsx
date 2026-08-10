@@ -257,6 +257,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     });
   };
 
+  const handleClearPayments = () => {
+    if (
+      !confirm(
+        'Limpar todo o Histórico de Pagamentos?\n\nOs pagamentos serão removidos permanentemente. Essa ação não pode ser desfeita.'
+      )
+    )
+      return;
+    onSaveSettings({ ...settings, employeePayments: [] });
+  };
+
   const handleMaterialPhoto = (file: File | undefined) => {
     if (!file || !materialForm) return;
     const reader = new FileReader();
@@ -1049,11 +1059,21 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           {/* Payment history */}
           {activeTab === 'funcionarios' && (settings.employeePayments?.length || 0) > 0 && (
             <div className="pt-2">
-              <div className="flex items-center gap-2 mb-3">
-                <History className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wide">
-                  Histórico de Pagamentos
-                </span>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wide">
+                    Histórico de Pagamentos
+                  </span>
+                </div>
+                <button
+                  onClick={handleClearPayments}
+                  className="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Limpar todo o histórico de pagamentos"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Limpar Histórico
+                </button>
               </div>
               <div className="space-y-2">
                 {[...settings.employeePayments]

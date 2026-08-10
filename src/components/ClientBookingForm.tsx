@@ -635,32 +635,40 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
             </div>
           </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={isClientOnly ? '' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
           <button
             type="submit"
             id="btn-client-submit-whatsapp"
-            className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-500/25 transition-all duration-200 cursor-pointer active:scale-95"
+            className={`w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-500/25 transition-all duration-200 cursor-pointer active:scale-95 ${
+              isClientOnly ? '' : 'h-full'
+            }`}
           >
             <MessageCircle className="w-5 h-5 fill-current shrink-0" />
             <span>CONFIRMAR E ENVIAR NO WHATSAPP</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleCounterConfirm}
-            id="btn-client-submit-counter"
-            className="w-full py-4 px-6 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-cyan-500/25 transition-all duration-200 cursor-pointer active:scale-95"
-          >
-            <ShieldCheck className="w-5 h-5 shrink-0" />
-            <span>CONFIRMAR NO BALCÃO</span>
-          </button>
+          {!isClientOnly && (
+            <button
+              type="button"
+              onClick={handleCounterConfirm}
+              id="btn-client-submit-counter"
+              className="w-full py-4 px-6 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-cyan-500/25 transition-all duration-200 cursor-pointer active:scale-95"
+            >
+              <ShieldCheck className="w-5 h-5 shrink-0" />
+              <span>CONFIRMAR NO BALCÃO</span>
+            </button>
+          )}
         </div>
 
         <p className="text-center text-[11px] text-gray-400 leading-relaxed">
           <strong>WhatsApp:</strong> salva o agendamento e abre a conversa com o{' '}
-          {settings.storeName} ({settings.whatsappPhone}). <strong>Balcão:</strong>{' '}
-          confirma aqui na loja (relatório do balcão) e reserva o horário sem enviar
-          mensagem.
+          {settings.storeName} ({settings.whatsappPhone}).{!isClientOnly && (
+            <>
+              {' '}
+              <strong>Balcão:</strong> confirma aqui na loja (relatório do balcão) e
+              reserva o horário sem enviar mensagem.
+            </>
+          )}
         </p>
       </section>
 
