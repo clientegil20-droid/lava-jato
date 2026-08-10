@@ -477,6 +477,27 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                       Registrado: {new Date(apt.createdAt).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
+
+                  {isOwner && (
+                    <div className="pt-2 border-t border-gray-800/70 flex justify-end">
+                      <button
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Excluir esta lavagem do histórico?\n\n${apt.code} - ${apt.customerName} - ${apt.vehicleName} (${apt.carModel})\n\nEssa ação não pode ser desfeita.`
+                            )
+                          ) {
+                            onDeleteAppointment(apt.id);
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Excluir lavagem do histórico"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Excluir do Histórico
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             }

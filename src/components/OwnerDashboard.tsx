@@ -267,6 +267,19 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     onSaveSettings({ ...settings, employeePayments: [] });
   };
 
+  const handleDeletePayment = (id: string) => {
+    if (
+      !confirm(
+        'Excluir este pagamento do histórico?\n\nO registro será removido permanentemente. Essa ação não pode ser desfeita.'
+      )
+    )
+      return;
+    onSaveSettings({
+      ...settings,
+      employeePayments: settings.employeePayments.filter((p) => p.id !== id),
+    });
+  };
+
   const handleMaterialPhoto = (file: File | undefined) => {
     if (!file || !materialForm) return;
     const reader = new FileReader();
@@ -1107,13 +1120,22 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           </div>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-black text-emerald-300 text-sm">
-                          {formatBRL(p.amount)}
+                      <div className="text-right shrink-0 flex items-center gap-2">
+                        <div>
+                          <div className="font-black text-emerald-300 text-sm">
+                            {formatBRL(p.amount)}
+                          </div>
+                          <div className="text-[9px] text-gray-600">
+                            vendas {formatBRL(p.revenue)}
+                          </div>
                         </div>
-                        <div className="text-[9px] text-gray-600">
-                          vendas {formatBRL(p.revenue)}
-                        </div>
+                        <button
+                          onClick={() => handleDeletePayment(p.id)}
+                          className="p-1.5 rounded-lg text-red-400/70 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          title="Excluir este pagamento do histórico"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))}
