@@ -81,6 +81,7 @@ export interface Appointment {
   paidAt?: string;
   completedBy?: string; // employee name/phone
   materialNames?: string[]; // materials/products chosen by the customer
+  isCounterBooking?: boolean; // registered directly at the counter (reserves the slot)
   statusChangeCount?: number; // how many times the status was changed
   pendingStatusChange?: AppointmentStatus | null; // status requested by employee, awaiting owner approval
 }

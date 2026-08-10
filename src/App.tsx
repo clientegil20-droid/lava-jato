@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Appointment, AppointmentStatus, Employee, PaymentMethod, StoreSettings, UserRole, VehicleId, WashId, LOCAL_STORAGE_EMPLOYEE_KEY } from './types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Appointment, AppointmentStatus, Employee, PaymentMethod, StoreSettings, UserRole, LOCAL_STORAGE_EMPLOYEE_KEY } from './types';
 
 const STATUS_RANK: Record<AppointmentStatus, number> = {
   agendado: 0,
@@ -12,7 +12,7 @@ const STATUS_RANK: Record<AppointmentStatus, number> = {
 
 const isForwardStatusChange = (from: AppointmentStatus, to: AppointmentStatus) =>
   STATUS_RANK[to] > STATUS_RANK[from];
-import { DEFAULT_SETTINGS, DEFAULT_VEHICLES, DEFAULT_WASHES } from './data/defaultData';
+import { DEFAULT_SETTINGS } from './data/defaultData';
 import { buildReceiptMessage, openWhatsApp } from './utils/whatsapp';
 import {
   fetchAppointments,
@@ -26,11 +26,6 @@ import {
 } from './lib/db';
 import { isSupabaseConfigured } from './lib/supabase';
 import { Header } from './components/Header';
-import { VehicleSelector } from './components/VehicleSelector';
-import { WashSelector } from './components/WashSelector';
-import { ExtrasSelector } from './components/ExtrasSelector';
-import { TotalFooter } from './components/TotalFooter';
-import { OrderModal } from './components/OrderModal';
 import { AdminSettings } from './components/AdminSettings';
 import { ShareMenuModal } from './components/ShareMenuModal';
 import { ReceiptModal } from './components/ReceiptModal';
@@ -167,19 +162,10 @@ export default function App() {
     return isSupabaseConfigured ? [] : SAMPLE_APPOINTMENTS;
   });
 
-  // User Selections for Orçamento
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleId | null>('hatch');
-  const [selectedWash, setSelectedWash] = useState<WashId | null>('completa');
-  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
-
   // Modals state
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedReceiptApt, setSelectedReceiptApt] = useState<Appointment | null>(null);
-
-  // Section ref for smooth scrolling
-  const washSectionRef = useRef<HTMLDivElement>(null);
 
   // Client-only mode when opened via the shared customer link
   const isClientLink = useMemo(() => {
@@ -314,7 +300,11 @@ export default function App() {
     setSelectedReceiptApt(enriched);
 
     // Automatically send message to company WhatsApp when appointment is created by client
-    if (enriched.createdBy === 'cliente' || appMode === 'cliente') {
+    // (counter bookings reserve the slot without sending any message)
+    if (
+      !enriched.isCounterBooking &&
+      (enriched.createdBy === 'cliente' || appMode === 'cliente')
+    ) {
       const msg = buildReceiptMessage(enriched, settings.storeName, settings.whatsappPhone);
       openWhatsApp(settings.whatsappPhone, msg);
     }
@@ -506,53 +496,6 @@ export default function App() {
     deleteAppointmentDb(id);
   };
 
-  // Toggle selection handlers
-  const handleSelectVehicle = (id: VehicleId) => {
-    setSelectedVehicle(id);
-    if (!selectedWash) {
-      setSelectedWash('completa');
-    }
-
-    // Smooth scroll to Wash Selector (Step 2)
-    setTimeout(() => {
-      washSectionRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 50);
-  };
-
-  const handleSelectWash = (id: WashId) => {
-    setSelectedWash(id);
-  };
-
-  const handleToggleExtra = (id: string) => {
-    setSelectedExtras((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  // Calculate Running Total
-  let total = 0;
-  if (selectedVehicle && selectedWash && settings.priceMatrix[selectedVehicle]) {
-    total += settings.priceMatrix[selectedVehicle][selectedWash] || 0;
-  }
-
-  selectedExtras.forEach((extraId) => {
-    const extraObj = settings.extraServices.find((e) => e.id === extraId);
-    if (extraObj) {
-      total += extraObj.price;
-    }
-  });
-
-  const itemCount = (selectedWash ? 1 : 0) + selectedExtras.length;
-
-  const currentVehicleObj = DEFAULT_VEHICLES.find((v) => v.id === selectedVehicle);
-  const currentWashObj = DEFAULT_WASHES.find((w) => w.id === selectedWash);
-  const currentExtrasObjs = settings.extraServices.filter((e) =>
-    selectedExtras.includes(e.id)
-  );
-
   return (
     <div className="min-h-screen bg-[#121214] text-white flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
       {/* Header */}
@@ -643,9 +586,6 @@ export default function App() {
               onUpdateStatus={handleUpdateStatus}
               onDeleteAppointment={handleDeleteAppointment}
               onOpenReceiptModal={(apt) => setSelectedReceiptApt(apt)}
-              onCreateNewClick={() => {
-                setIsOrderModalOpen(true);
-              }}
               onAddProducts={handleAddProducts}
             />
           </div>
@@ -660,21 +600,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Customer / Staff Reservation Modal */}
-      <OrderModal
-        isOpen={isOrderModalOpen}
-        onClose={() => setIsOrderModalOpen(false)}
-        selectedVehicle={currentVehicleObj || null}
-        selectedWash={currentWashObj || null}
-        selectedExtras={currentExtrasObjs}
-        selectedMaterials={(settings.materials || []).filter((m) => m.active)}
-        totalPrice={total}
-        whatsappPhone={settings.whatsappPhone}
-        storeName={settings.storeName}
-        isStaffMode={appMode === 'funcionario'}
-        onConfirmAppointment={handleConfirmAppointment}
-      />
 
       {/* Comprovante / Receipt Modal */}
       <ReceiptModal

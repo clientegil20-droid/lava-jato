@@ -11,7 +11,6 @@ import {
   Sparkles,
   Phone,
   Search,
-  Plus,
   Receipt,
   MessageCircle,
   Trash2,
@@ -45,7 +44,6 @@ interface AppointmentQueueProps {
   ) => void;
   onDeleteAppointment: (id: string) => void;
   onOpenReceiptModal: (apt: Appointment) => void;
-  onCreateNewClick: () => void;
   onAddProducts: (id: string, extraIds: string[]) => void;
 }
 
@@ -57,7 +55,6 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   onUpdateStatus,
   onDeleteAppointment,
   onOpenReceiptModal,
-  onCreateNewClick,
   onAddProducts,
 }) => {
   const [filterStatus, setFilterStatus] = useState<string>('todos');
@@ -285,15 +282,6 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
               )}
             </button>
           )}
-
-          <button
-            onClick={onCreateNewClick}
-            id="btn-new-appointment-staff"
-            className="w-full sm:w-auto px-4 py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-400/20 cursor-pointer active:scale-95 transition-all shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Cadastrar Agendamento Balcão</span>
-          </button>
         </div>
       </div>
 
@@ -368,13 +356,6 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
               ? 'Nenhuma lavagem pendente. Quando um serviço for marcado como Pronto ou Concluído, ele sai daqui e vai para o Histórico.'
               : 'Nenhuma lavagem pronta ou concluída no histórico ainda.'}
           </p>
-          <button
-            onClick={onCreateNewClick}
-            className="inline-flex items-center gap-1.5 text-xs text-cyan-400 font-bold hover:underline cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Cadastrar primeiro agendamento
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">

@@ -78,8 +78,13 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
   // Statuses that occupy a slot (approved and beyond blocks it for new clients)
   const BLOCKING_STATUSES: Appointment['status'][] = ['aprovado', 'em_lavagem', 'pronto', 'entregue'];
 
+  // A slot is blocked when there's an approved/active wash OR a counter booking
   const blockedTimeSlots = appointments
-    .filter((apt) => apt.date === date && BLOCKING_STATUSES.includes(apt.status))
+    .filter(
+      (apt) =>
+        apt.date === date &&
+        (apt.isCounterBooking || BLOCKING_STATUSES.includes(apt.status))
+    )
     .map((apt) => apt.timeSlot);
 
   const isSlotBlocked = (slot: string) => blockedTimeSlots.includes(slot);
@@ -149,39 +154,39 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const validate = () => {
     if (!customerName.trim()) {
       setValidationError('Por favor, informe seu Nome Completo.');
-      return;
+      return false;
     }
 
     if (!customerPhone.trim()) {
       setValidationError('Por favor, informe seu número do WhatsApp.');
-      return;
+      return false;
     }
 
     if (!carModel.trim()) {
       setValidationError('Por favor, informe o Modelo e Cor do seu veículo (ex: Hilux Prata).');
-      return;
+      return false;
     }
 
     if (deliveryOption && !address.trim()) {
       setValidationError('Por favor, informe o Endereço para busca no Leva e Traz.');
-      return;
+      return false;
     }
 
     if (isSlotBlocked(timeSlot)) {
       setValidationError('Infelizmente este horário acabou de ser reservado. Por favor, escolha outro horário disponível.');
-      return;
+      return false;
     }
 
     setValidationError(null);
+    return true;
+  };
 
-    // Create Appointment
+  const buildAppointment = (isCounter: boolean): Appointment => {
     const codeNum = Math.floor(100 + Math.random() * 900);
-    const newAppointment: Appointment = {
+    return {
       id: `apt_${Date.now()}`,
       code: `#${codeNum}`,
       createdAt: new Date().toISOString(),
@@ -201,10 +206,20 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
       address: address.trim(),
       notes: notes.trim(),
       status: 'agendado',
-      createdBy: 'cliente',
+      createdBy: isCounter ? 'funcionario' : 'cliente',
+      isCounterBooking: isCounter ? true : undefined,
     };
+  };
 
-    onConfirmAppointment(newAppointment);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    onConfirmAppointment(buildAppointment(false));
+  };
+
+  const handleCounterConfirm = () => {
+    if (!validate()) return;
+    onConfirmAppointment(buildAppointment(true));
   };
 
   return (
@@ -521,14 +536,23 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
                       onClick={() => setTimeSlot(slot)}
                       className={`py-1.5 px-2 rounded-lg font-mono text-[11px] font-bold text-center border transition-all cursor-pointer ${
                         isBlocked
-                          ? 'border-gray-900 bg-gray-950/80 text-gray-600 line-through opacity-60 cursor-not-allowed'
+                          ? 'border-gray-900 bg-gray-950/80 text-gray-600 opacity-60 cursor-not-allowed'
                           : isSelected
                           ? 'border-cyan-400 bg-cyan-500 text-slate-950 shadow-sm'
                           : 'border-gray-800 bg-[#121215] text-gray-300 hover:border-gray-700'
                       }`}
-                      title={isBlocked ? 'Horário já reservado / indisponível' : slot}
+                      title={isBlocked ? 'Horário reservado / indisponível' : slot}
                     >
-                      {isBlocked ? `${slot} ✕` : slot}
+                      {isBlocked ? (
+                        <span className="flex flex-col items-center leading-tight">
+                          <span className="line-through">{slot}</span>
+                          <span className="text-[8px] font-semibold not-italic normal-case text-rose-400/80">
+                            Reservado
+                          </span>
+                        </span>
+                      ) : (
+                        slot
+                      )}
                     </button>
                   );
                 })}
@@ -611,17 +635,32 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
             </div>
           </div>
 
-        <button
-          type="submit"
-          id="btn-client-submit-whatsapp"
-          className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-500/25 transition-all duration-200 cursor-pointer active:scale-95"
-        >
-          <MessageCircle className="w-5 h-5 fill-current shrink-0" />
-          <span>CONFIRMAR E ENVIAR NO WHATSAPP</span>
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="submit"
+            id="btn-client-submit-whatsapp"
+            className="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-emerald-500/25 transition-all duration-200 cursor-pointer active:scale-95"
+          >
+            <MessageCircle className="w-5 h-5 fill-current shrink-0" />
+            <span>CONFIRMAR E ENVIAR NO WHATSAPP</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCounterConfirm}
+            id="btn-client-submit-counter"
+            className="w-full py-4 px-6 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-xl shadow-cyan-500/25 transition-all duration-200 cursor-pointer active:scale-95"
+          >
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <span>CONFIRMAR NO BALCÃO</span>
+          </button>
+        </div>
 
         <p className="text-center text-[11px] text-gray-400 leading-relaxed">
-          Ao clicar, o agendamento será salvo e abrirá a conversa com o WhatsApp do <strong>{settings.storeName}</strong> ({settings.whatsappPhone}).
+          <strong>WhatsApp:</strong> salva o agendamento e abre a conversa com o{' '}
+          {settings.storeName} ({settings.whatsappPhone}). <strong>Balcão:</strong>{' '}
+          confirma aqui na loja (relatório do balcão) e reserva o horário sem enviar
+          mensagem.
         </p>
       </section>
 
