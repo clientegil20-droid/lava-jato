@@ -24,6 +24,7 @@ export const MaterialsShopDrawer: React.FC<MaterialsShopDrawerProps> = ({
     <>
       {/* Floating arrow button (setinha) */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="fixed top-1/2 right-0 -translate-y-1/2 z-40 flex items-center gap-1.5 pl-2.5 pr-3 py-3 rounded-l-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-xl shadow-cyan-500/30 cursor-pointer transition-all active:scale-95 border-l border-cyan-300/50"
         title="Abrir Lojinha de Materiais"
@@ -60,6 +61,7 @@ export const MaterialsShopDrawer: React.FC<MaterialsShopDrawerProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors cursor-pointer"
           >
@@ -74,6 +76,7 @@ export const MaterialsShopDrawer: React.FC<MaterialsShopDrawerProps> = ({
             return (
               <button
                 key={mat.id}
+                type="button"
                 onClick={() => onToggle(mat.id)}
                 className={`w-full text-left p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3 ${
                   isSelected
@@ -132,6 +135,7 @@ export const MaterialsShopDrawer: React.FC<MaterialsShopDrawerProps> = ({
             <span className="font-black text-white text-sm">{selectedIds.length} item(ns)</span>
           </div>
           <button
+            type="button"
             onClick={() => setIsOpen(false)}
             className="px-4 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs cursor-pointer transition-all active:scale-95"
           >
