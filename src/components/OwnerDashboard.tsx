@@ -1047,7 +1047,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           )}
 
           {/* Payment history */}
-          {(settings.employeePayments?.length || 0) > 0 && (
+          {activeTab === 'funcionarios' && (settings.employeePayments?.length || 0) > 0 && (
             <div className="pt-2">
               <div className="flex items-center gap-2 mb-3">
                 <History className="w-4 h-4 text-cyan-400" />
