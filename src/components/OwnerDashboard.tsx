@@ -27,6 +27,8 @@ import {
   Banknote as BanknoteIcon,
   Store,
   ImagePlus,
+  Gauge,
+  BadgeDollarSign,
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -92,6 +94,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   });
   const totalExpenses = expensesInRange.reduce((sum, e) => sum + e.amount, 0);
   const profit = totalRevenue - totalExpenses;
+  const capitalScore =
+    totalRevenue > 0 ? Math.max(0, Math.min(100, (profit / totalRevenue) * 100)) : 0;
 
   // Payment method breakdown
   const methodTotals: Record<PaymentMethod, { count: number; total: number }> = {
@@ -204,10 +208,18 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     const employees = settings.employees.map((e) =>
       e.id === payment.employeeId ? { ...e, lastPaymentAt: now } : e
     );
+    const paymentExpense: Expense = {
+      id: `exp_pay_${Date.now()}`,
+      date: now.split('T')[0],
+      description: `Pagamento - ${payment.employeeName}`,
+      category: 'Funcionários',
+      amount: payment.amount,
+    };
     onSaveSettings({
       ...settings,
       employees,
       employeePayments: [...(settings.employeePayments || []), payment],
+      expenses: [...(settings.expenses || []), paymentExpense],
     });
     setPayingEmployee(null);
   };
@@ -222,7 +234,18 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     const next = exists
       ? settings.materials.map((m) => (m.id === materialForm.id ? materialForm : m))
       : [...settings.materials, materialForm];
-    onSaveSettings({ ...settings, materials: next });
+    let expenses = settings.expenses;
+    if (!exists && (materialForm.costPrice || 0) > 0) {
+      const costExpense: Expense = {
+        id: `exp_mat_${Date.now()}`,
+        date: new Date().toISOString().split('T')[0],
+        description: `Compra de material - ${materialForm.name}`,
+        category: 'Produtos',
+        amount: materialForm.costPrice || 0,
+      };
+      expenses = [...expenses, costExpense];
+    }
+    onSaveSettings({ ...settings, materials: next, expenses });
     setMaterialForm(null);
   };
 
@@ -388,6 +411,119 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </div>
                   <div className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
                     <Users className="w-3 h-3" /> {totalClients} clientes
+                  </div>
+                </div>
+              </div>
+
+              {/* Capital Panel */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#131c18] to-[#121215] border border-emerald-500/40">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Gauge className="w-4 h-4 text-emerald-400" />
+                    Painel do Capital
+                  </div>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wide">
+                    Giro • Líquido • Bruto
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  {/* Score gauge */}
+                  <div className="flex flex-col items-center justify-center py-2">
+                    <div className="relative">
+                      <svg width="200" height="120" viewBox="0 0 200 120">
+                        <path
+                          d="M 20 105 A 80 80 0 0 1 180 105"
+                          fill="none"
+                          stroke="#1f2937"
+                          strokeWidth="14"
+                          strokeLinecap="round"
+                        />
+                        <path
+                          d="M 20 105 A 80 80 0 0 1 180 105"
+                          fill="none"
+                          stroke="url(#capitalGrad)"
+                          strokeWidth="14"
+                          strokeLinecap="round"
+                          strokeDasharray={`${capitalScore * 2.513} 251.3`}
+                          style={{ transition: 'stroke-dasharray 0.8s ease' }}
+                        />
+                        <defs>
+                          <linearGradient id="capitalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#f43f5e" />
+                            <stop offset="50%" stopColor="#f59e0b" />
+                            <stop offset="100%" stopColor="#10b981" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pt-3">
+                        <span
+                          className={`text-3xl font-black ${
+                            capitalScore >= 60
+                              ? 'text-emerald-300'
+                              : capitalScore >= 30
+                              ? 'text-amber-300'
+                              : 'text-rose-300'
+                          }`}
+                        >
+                          {capitalScore.toFixed(0)}
+                        </span>
+                        <span className="text-[9px] text-gray-500 uppercase tracking-wide">
+                          Pontuação
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-rose-400" /> 0
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" /> 50
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> 100
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Capital values */}
+                  <div className="space-y-2.5">
+                    <div className="p-3 rounded-xl bg-[#121215] border border-emerald-500/30 flex items-center justify-between">
+                      <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <BadgeDollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                        Giro (vendas)
+                      </span>
+                      <span className="font-black text-emerald-300 text-lg">
+                        {formatBRL(totalRevenue)}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#121215] border border-emerald-500/30 flex items-center justify-between">
+                      <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <PiggyBank className="w-3.5 h-3.5 text-emerald-400" />
+                        Valor Líquido
+                      </span>
+                      <span
+                        className={`font-black text-lg ${
+                          profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                        }`}
+                      >
+                        {formatBRL(profit)}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#121215] border border-gray-800 flex items-center justify-between">
+                      <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+                        Valor Bruto
+                      </span>
+                      <span className="font-black text-white text-lg">
+                        {formatBRL(totalRevenue)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-600 leading-snug">
+                      Giro = todo o valor movimentado. Líquido = o que sobra após os
+                      gastos (despesas + funcionários). Bruto = valor total sem descontos.
+                      A pontuação reflete sua margem: quanto maior, melhor.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1169,6 +1305,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                       name: '',
                       description: '',
                       price: 0,
+                      costPrice: 0,
                       active: true,
                     })
                   }
@@ -1261,6 +1398,27 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           className={inputCls}
                         />
                       </div>
+                      <div>
+                        <label className="text-[11px] text-gray-400 block mb-1">
+                          Valor pago (custo) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={materialForm.costPrice || ''}
+                          onChange={(e) =>
+                            setMaterialForm({
+                              ...materialForm,
+                              costPrice: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className={inputCls}
+                        />
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          Vai direto para as despesas ao salvar.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -1334,6 +1492,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                           </div>
                           <div className="font-black text-emerald-300 text-sm">
                             {formatBRL(mat.price)}
+                          </div>
+                          <div className="text-[10px] text-gray-500">
+                            custo {formatBRL(mat.costPrice || 0)}
                           </div>
                           {!mat.active && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-500 border border-gray-700">

@@ -31,6 +31,7 @@ export interface Material {
   name: string;
   description: string;
   price: number;
+  costPrice?: number;
   photoUrl?: string;
   active: boolean;
 }
