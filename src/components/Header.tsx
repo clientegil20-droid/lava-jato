@@ -32,7 +32,11 @@ export const Header: React.FC<HeaderProps> = ({
   const isOwner = role === 'dono';
 
   return (
-    <header className="relative bg-gradient-to-b from-[#1a232e] via-[#121214] to-[#121214] pt-6 pb-6 px-4 border-b border-cyan-500/20">
+    <header
+      className={`relative bg-gradient-to-b from-[#1a232e] via-[#121214] to-[#121214] px-4 border-b border-cyan-500/20 ${
+        appMode === 'funcionario' ? 'pt-4 pb-4' : 'pt-6 pb-6'
+      }`}
+    >
       <div className="max-w-2xl md:max-w-4xl lg:max-w-6xl mx-auto text-center relative">
         {/* Top bar with mode switcher & settings (hidden for client-only link) */}
         {!isClientOnly && (
@@ -138,6 +142,24 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         {/* Brand Icon & Name */}
+        {appMode === 'funcionario' ? (
+          <div className="flex items-center justify-start gap-3 text-left">
+            <img
+              src="/lava_jato_logo.jpg"
+              alt="Lava Jato Redenção Logo"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover shadow-inner ring-2 ring-cyan-400/50"
+              referrerPolicy="no-referrer"
+            />
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight truncate">
+                {settings.storeName}
+              </h1>
+              <p className="text-[11px] text-cyan-200/80 truncate">
+                {settings.subtitle}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className="inline-flex items-center justify-center p-1.5 rounded-full bg-gradient-to-br from-cyan-500/30 via-blue-600/20 to-cyan-400/30 border-2 border-cyan-400/50 mb-3 shadow-xl shadow-cyan-500/20 ring-4 ring-cyan-500/10">
           <img
             src="/lava_jato_logo.jpg"
@@ -146,7 +168,10 @@ export const Header: React.FC<HeaderProps> = ({
             referrerPolicy="no-referrer"
           />
         </div>
+        )}
 
+        {appMode !== 'funcionario' && (
+        <>
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-1">
           {settings.storeName}
         </h1>
@@ -154,8 +179,12 @@ export const Header: React.FC<HeaderProps> = ({
         <p className="text-xs sm:text-sm text-cyan-200/80 max-w-md mx-auto mb-3 font-medium">
           {settings.subtitle}
         </p>
+        </>
+        )}
 
-        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400">
+        <div className={`flex flex-wrap items-center justify-center gap-3 text-xs text-gray-400 ${
+          appMode === 'funcionario' ? 'hidden' : ''
+        }`}>
           <a
             href={`https://maps.google.com/?q=${encodeURIComponent(settings.address)}`}
             target="_blank"

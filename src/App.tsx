@@ -596,7 +596,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-2xl md:max-w-4xl lg:max-w-6xl w-full mx-auto px-4 pt-6 pb-32">
+      <main className="flex-1 max-w-2xl md:max-w-4xl lg:max-w-6xl w-full mx-auto px-4 pt-4 pb-32">
         {/* Mode Switch Navigation Banner */}
         {appMode === 'funcionario' ? (
           /* Staff View */
