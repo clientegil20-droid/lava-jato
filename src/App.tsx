@@ -144,6 +144,7 @@ export default function App() {
           employees: parsed.employees ?? DEFAULT_SETTINGS.employees,
           expenses: parsed.expenses ?? DEFAULT_SETTINGS.expenses,
           employeePayments: parsed.employeePayments ?? DEFAULT_SETTINGS.employeePayments,
+          materials: parsed.materials ?? DEFAULT_SETTINGS.materials,
         };
       }
     } catch (e) {
@@ -213,6 +214,8 @@ export default function App() {
             remoteSettings.employeePayments ??
             settings.employeePayments ??
             DEFAULT_SETTINGS.employeePayments,
+          materials:
+            remoteSettings.materials ?? settings.materials ?? DEFAULT_SETTINGS.materials,
         };
         setSettings(next);
         try {
@@ -665,6 +668,7 @@ export default function App() {
         selectedVehicle={currentVehicleObj || null}
         selectedWash={currentWashObj || null}
         selectedExtras={currentExtrasObjs}
+        selectedMaterials={(settings.materials || []).filter((m) => m.active)}
         totalPrice={total}
         whatsappPhone={settings.whatsappPhone}
         storeName={settings.storeName}

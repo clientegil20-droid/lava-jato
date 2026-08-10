@@ -26,6 +26,15 @@ export interface ExtraService {
   popular?: boolean;
 }
 
+export interface Material {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  photoUrl?: string;
+  active: boolean;
+}
+
 export type PriceMatrix = Record<VehicleId, Record<WashId, number>>;
 
 export interface CustomerData {
@@ -70,6 +79,7 @@ export interface Appointment {
   paymentMethod?: PaymentMethod;
   paidAt?: string;
   completedBy?: string; // employee name/phone
+  materialNames?: string[]; // materials/products chosen by the customer
   statusChangeCount?: number; // how many times the status was changed
   pendingStatusChange?: AppointmentStatus | null; // status requested by employee, awaiting owner approval
 }
@@ -132,4 +142,5 @@ export interface StoreSettings {
   employees: Employee[];
   expenses: Expense[];
   employeePayments: EmployeePayment[];
+  materials: Material[];
 }

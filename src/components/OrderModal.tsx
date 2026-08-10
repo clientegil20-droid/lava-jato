@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Appointment, CustomerData, ExtraService, VehicleOption, WashOption } from '../types';
-import { X, MessageCircle, Calendar, Clock, Car, MapPin, Receipt, User, Phone } from 'lucide-react';
+import { Appointment, CustomerData, ExtraService, Material, VehicleOption, WashOption } from '../types';
+import { X, MessageCircle, Calendar, Clock, Car, MapPin, Receipt, User, Phone, ShoppingBag } from 'lucide-react';
 
 interface OrderModalProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface OrderModalProps {
   selectedVehicle: VehicleOption | null;
   selectedWash: WashOption | null;
   selectedExtras: ExtraService[];
+  selectedMaterials?: Material[];
   totalPrice: number;
   whatsappPhone: string;
   storeName: string;
@@ -21,6 +22,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
   selectedVehicle,
   selectedWash,
   selectedExtras,
+  selectedMaterials = [],
   totalPrice,
   whatsappPhone,
   storeName,
@@ -42,9 +44,21 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     notes: '',
   });
 
+  const [materialIds, setMaterialIds] = useState<string[]>([]);
+
   const [validationError, setValidationError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const chosenMaterials = selectedMaterials.filter((m) => materialIds.includes(m.id));
+  const materialsTotal = chosenMaterials.reduce((s, m) => s + m.price, 0);
+  const effectiveTotal = totalPrice + materialsTotal;
+
+  const toggleMaterial = (id: string) => {
+    setMaterialIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   const formatPrice = (amount: number) => {
     return amount.toLocaleString('pt-BR', {
@@ -85,7 +99,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
       vehicleName: selectedVehicle.name,
       washName: selectedWash.name,
       extraNames: selectedExtras.map((e) => e.name),
-      totalPrice: totalPrice,
+      materialNames: chosenMaterials.map((m) => m.name),
+      totalPrice: effectiveTotal,
       date: customer.date,
       timeSlot: customer.timeSlot,
       deliveryOption: customer.deliveryOption,
@@ -133,7 +148,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             <div className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center justify-between">
               <span>Resumo do Pedido</span>
               <span className="text-white text-sm font-black">
-                {formatPrice(totalPrice)}
+                {formatPrice(effectiveTotal)}
               </span>
             </div>
 
@@ -162,8 +177,64 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                   </ul>
                 </div>
               )}
+              {chosenMaterials.length > 0 && (
+                <div className="pt-1 border-t border-gray-800">
+                  <span className="text-gray-400 block mb-0.5">Materiais (Lojinha):</span>
+                  <ul className="list-disc list-inside text-gray-300 space-y-0.5">
+                    {chosenMaterials.map((m) => (
+                      <li key={m.id} className="text-[11px]">
+                        {m.name} (+ {formatPrice(m.price)})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Materials picker (Lojinha) */}
+          {selectedMaterials.length > 0 && (
+            <div className="p-3.5 rounded-xl bg-[#121215] border border-amber-500/20 space-y-2">
+              <div className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <ShoppingBag className="w-4 h-4" />
+                Lojinha do Lava Jato (Opcional)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {selectedMaterials.map((m) => {
+                  const isSelected = materialIds.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => toggleMaterial(m.id)}
+                      className={`text-left p-2.5 rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+                        isSelected
+                          ? 'border-amber-400/80 bg-amber-950/30'
+                          : 'border-gray-800 bg-[#18181c] hover:border-gray-700'
+                      }`}
+                    >
+                      {m.photoUrl ? (
+                        <img
+                          src={m.photoUrl}
+                          alt={m.name}
+                          className="w-9 h-9 rounded-lg object-cover border border-gray-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 shrink-0">
+                          <ShoppingBag className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-bold text-white truncate">{m.name}</div>
+                        <div className="text-[11px] text-amber-300 font-bold">
+                          + {formatPrice(m.price)}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {validationError && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">

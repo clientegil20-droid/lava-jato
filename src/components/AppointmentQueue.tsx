@@ -476,6 +476,11 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
                       Adicionais: {apt.extraNames.join(', ')}
                     </span>
                   )}
+                  {apt.materialNames && apt.materialNames.length > 0 && (
+                    <span className="text-[11px] text-amber-300 block mt-0.5">
+                      🛍️ Lojinha: {apt.materialNames.join(', ')}
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-right">

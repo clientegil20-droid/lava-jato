@@ -69,6 +69,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   employees: [],
   expenses: [],
   employeePayments: [],
+  materials: [],
   priceMatrix: {
     moto: { simples: 22, completa: 35, detalhada: 55 },
     hatch: { simples: 40, completa: 55, detalhada: 105 },

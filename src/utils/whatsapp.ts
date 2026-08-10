@@ -56,6 +56,13 @@ export function buildReceiptMessage(
     });
   }
 
+  if (apt.materialNames && apt.materialNames.length > 0) {
+    msg += `🛍️ *Materiais da Lojinha:*\n`;
+    apt.materialNames.forEach((mat) => {
+      msg += `   • ${mat}\n`;
+    });
+  }
+
   if (apt.deliveryOption) {
     msg += `🚚 *Serviço Leva e Traz:* Ativado\n`;
     if (apt.address) {

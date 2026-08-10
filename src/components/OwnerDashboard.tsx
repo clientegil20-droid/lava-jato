@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Appointment, Employee, EmployeePayment, Expense, PaymentMethod, StoreSettings } from '../types';
+import { Appointment, Employee, EmployeePayment, Expense, Material, PaymentMethod, StoreSettings } from '../types';
 import { formatBRL } from '../utils/whatsapp';
 import { EmployeePaymentModal } from './EmployeePaymentModal';
 import {
@@ -25,6 +25,8 @@ import {
   BarChart3,
   PiggyBank,
   Banknote as BanknoteIcon,
+  Store,
+  ImagePlus,
 } from 'lucide-react';
 
 interface OwnerDashboardProps {
@@ -38,7 +40,7 @@ interface OwnerDashboardProps {
   onOpenSettings: () => void;
 }
 
-type Tab = 'resumo' | 'aprovacoes' | 'funcionarios' | 'despesas';
+type Tab = 'resumo' | 'aprovacoes' | 'funcionarios' | 'despesas' | 'materiais';
 
 const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
   dinheiro: <Banknote className="w-4 h-4" />,
@@ -70,6 +72,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [expenseForm, setExpenseForm] = useState<Expense | null>(null);
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [payingEmployee, setPayingEmployee] = useState<Employee | null>(null);
+  const [materialForm, setMaterialForm] = useState<Material | null>(null);
 
   const delivered = appointments.filter((a) => a.status === 'entregue');
 
@@ -209,6 +212,37 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     setPayingEmployee(null);
   };
 
+  const handleSaveMaterial = () => {
+    if (!materialForm) return;
+    if (!materialForm.name.trim()) {
+      alert('Preencha o nome do material.');
+      return;
+    }
+    const exists = settings.materials.some((m) => m.id === materialForm.id);
+    const next = exists
+      ? settings.materials.map((m) => (m.id === materialForm.id ? materialForm : m))
+      : [...settings.materials, materialForm];
+    onSaveSettings({ ...settings, materials: next });
+    setMaterialForm(null);
+  };
+
+  const handleDeleteMaterial = (id: string) => {
+    if (!confirm('Excluir este material da lojinha?')) return;
+    onSaveSettings({
+      ...settings,
+      materials: settings.materials.filter((m) => m.id !== id),
+    });
+  };
+
+  const handleMaterialPhoto = (file: File | undefined) => {
+    if (!file || !materialForm) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMaterialForm({ ...materialForm, photoUrl: String(reader.result) });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const inputCls =
     'w-full px-3 py-2 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs focus:border-cyan-400 focus:outline-none';
 
@@ -257,6 +291,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             { id: 'aprovacoes' as Tab, label: `Aprovações (${pendingApprovals.length})`, icon: History },
             { id: 'funcionarios' as Tab, label: 'Funcionários & Comissões', icon: Users },
             { id: 'despesas' as Tab, label: 'Despesas', icon: Wallet },
+            { id: 'materiais' as Tab, label: 'Lojinha & Materiais', icon: Store },
           ].map((t) => (
             <button
               key={t.id}
@@ -1110,6 +1145,226 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                         </div>
                       </div>
                     ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ============ MATERIAIS / LOJINHA ============ */}
+          {activeTab === 'materiais' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-xs text-emerald-200 flex items-start gap-2.5">
+                  <Store className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>
+                    Cadastre itens de venda da lojinha (cheirinho, perfume Síria,
+                    acessórios...). Eles aparecem no formulário do cliente com foto,
+                    descrição e valor para ele escolher na hora do agendamento.
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    setMaterialForm({
+                      id: `mat_${Date.now()}`,
+                      name: '',
+                      description: '',
+                      price: 0,
+                      active: true,
+                    })
+                  }
+                  className="px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/30 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Novo Material
+                </button>
+              </div>
+
+              {/* Material Form */}
+              {materialForm && (
+                <div className="p-4 rounded-2xl bg-[#121215] border border-emerald-500/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <Store className="w-3.5 h-3.5" />
+                      {settings.materials.some((m) => m.id === materialForm.id)
+                        ? 'Editar Material'
+                        : 'Novo Material'}
+                    </span>
+                    <button
+                      onClick={() => setMaterialForm(null)}
+                      className="text-gray-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Photo upload */}
+                    <div>
+                      <label className="text-[11px] text-gray-400 block mb-1">
+                        Foto do material
+                      </label>
+                      <div className="flex items-center gap-3">
+                        {materialForm.photoUrl ? (
+                          <img
+                            src={materialForm.photoUrl}
+                            alt={materialForm.name || 'Material'}
+                            className="w-16 h-16 rounded-xl object-cover border border-gray-700"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500">
+                            <ImagePlus className="w-5 h-5" />
+                          </div>
+                        )}
+                        <label className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-bold border border-gray-700 cursor-pointer">
+                          {materialForm.photoUrl ? 'Trocar foto' : 'Enviar foto'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleMaterialPhoto(e.target.files?.[0])}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Name & price */}
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[11px] text-gray-400 block mb-1">
+                          Nome do material *
+                        </label>
+                        <input
+                          type="text"
+                          value={materialForm.name}
+                          onChange={(e) =>
+                            setMaterialForm({ ...materialForm, name: e.target.value })
+                          }
+                          placeholder="Ex: Cheirinho de Coco, Perfume Síria..."
+                          className={inputCls}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-400 block mb-1">
+                          Valor de venda (R$)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={materialForm.price || ''}
+                          onChange={(e) =>
+                            setMaterialForm({
+                              ...materialForm,
+                              price: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className={inputCls}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] text-gray-400 block mb-1">
+                      Descrição / Informações
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={materialForm.description}
+                      onChange={(e) =>
+                        setMaterialForm({ ...materialForm, description: e.target.value })
+                      }
+                      placeholder="Ex: Aroma de caramelo que dura até 30 dias..."
+                      className="w-full px-3 py-2 rounded-lg bg-[#121215] border border-gray-700 text-white text-xs focus:border-emerald-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={materialForm.active}
+                        onChange={(e) =>
+                          setMaterialForm({ ...materialForm, active: e.target.checked })
+                        }
+                        className="w-4 h-4 accent-emerald-400 cursor-pointer"
+                      />
+                      Ativo na lojinha
+                    </label>
+                    <button
+                      onClick={handleSaveMaterial}
+                      disabled={!materialForm.name.trim()}
+                      className="px-4 py-2 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-extrabold text-xs cursor-pointer disabled:opacity-40"
+                    >
+                      Salvar Material
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Material list */}
+              {settings.materials.length === 0 && !materialForm ? (
+                <div className="text-center py-8 text-xs text-gray-500">
+                  Nenhum material cadastrado ainda. Clique em "Novo Material" para começar.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {settings.materials.map((mat) => (
+                    <div
+                      key={mat.id}
+                      className={`p-3.5 rounded-2xl bg-[#121215] border space-y-3 ${
+                        mat.active ? 'border-gray-800' : 'border-gray-800/40 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {mat.photoUrl ? (
+                          <img
+                            src={mat.photoUrl}
+                            alt={mat.name}
+                            className="w-14 h-14 rounded-xl object-cover border border-gray-700"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500">
+                            <Store className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-white text-sm truncate">
+                            {mat.name}
+                          </div>
+                          <div className="font-black text-emerald-300 text-sm">
+                            {formatBRL(mat.price)}
+                          </div>
+                          {!mat.active && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-500 border border-gray-700">
+                              Inativo
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {mat.description && (
+                        <p className="text-[11px] text-gray-400 leading-snug">
+                          {mat.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1.5 justify-end pt-1 border-t border-gray-800/70">
+                        <button
+                          onClick={() => setMaterialForm({ ...mat })}
+                          className="p-1.5 rounded-lg text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+                          title="Editar material"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMaterial(mat.id)}
+                          className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          title="Excluir material"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

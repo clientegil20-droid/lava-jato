@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Appointment, ExtraService, PriceMatrix, StoreSettings, VehicleId, VehicleOption, WashId, WashOption } from '../types';
+import { Appointment, ExtraService, Material, PriceMatrix, StoreSettings, VehicleId, VehicleOption, WashId, WashOption } from '../types';
 import { DEFAULT_VEHICLES, DEFAULT_WASHES } from '../data/defaultData';
 import { buildReceiptMessage, openWhatsApp, formatBRL } from '../utils/whatsapp';
+import { MaterialsShopDrawer } from './MaterialsShopDrawer';
 import {
   Car,
   Droplets,
@@ -45,6 +46,7 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleId>('hatch');
   const [selectedWash, setSelectedWash] = useState<WashId>('completa');
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
 
   // Customer form fields
   const [customerName, setCustomerName] = useState('');
@@ -108,14 +110,30 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
     }
   });
 
+  selectedMaterials.forEach((materialId) => {
+    const matObj = settings.materials?.find((m) => m.id === materialId);
+    if (matObj) {
+      total += matObj.price;
+    }
+  });
+
   const currentVehicleObj = DEFAULT_VEHICLES.find((v) => v.id === selectedVehicle);
   const currentWashObj = DEFAULT_WASHES.find((w) => w.id === selectedWash);
   const currentExtrasObjs = settings.extraServices.filter((e) =>
     selectedExtras.includes(e.id)
   );
+  const currentMaterialsObjs = (settings.materials || []).filter((m) =>
+    selectedMaterials.includes(m.id)
+  );
 
   const handleToggleExtra = (id: string) => {
     setSelectedExtras((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleMaterial = (id: string) => {
+    setSelectedMaterials((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
@@ -175,6 +193,7 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
       vehicleName: currentVehicleObj?.name || 'Veículo',
       washName: currentWashObj?.name || 'Lavagem',
       extraNames: currentExtrasObjs.map((e) => e.name),
+      materialNames: currentMaterialsObjs.map((m) => m.name),
       totalPrice: total,
       date,
       timeSlot,
@@ -574,18 +593,23 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
 
       {/* CONFIRMAÇÃO & TOTAL */}
       <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-[#1c2836] to-[#121215] border border-cyan-500/40 space-y-5 shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-800">
-          <div>
-            <span className="text-xs text-gray-400 font-semibold block">Valor Total Previsto:</span>
-            <span className="text-2xl sm:text-3xl font-black text-cyan-300">
-              {formatBRL(total)}
-            </span>
+          <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+            <div>
+              <span className="text-xs text-gray-400 font-semibold block">Valor Total Previsto:</span>
+              <span className="text-2xl sm:text-3xl font-black text-cyan-300">
+                {formatBRL(total)}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[11px] text-gray-400 block font-medium">Veículo: {currentVehicleObj?.name}</span>
+              <span className="text-[11px] text-cyan-400 font-bold block">{currentWashObj?.name}</span>
+              {currentMaterialsObjs.length > 0 && (
+                <span className="text-[11px] text-emerald-400 font-semibold block mt-0.5">
+                  🛍️ {currentMaterialsObjs.map((m) => m.name).join(', ')}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <span className="text-[11px] text-gray-400 block font-medium">Veículo: {currentVehicleObj?.name}</span>
-            <span className="text-[11px] text-cyan-400 font-bold block">{currentWashObj?.name}</span>
-          </div>
-        </div>
 
         <button
           type="submit"
@@ -614,6 +638,13 @@ export const ClientBookingForm: React.FC<ClientBookingFormProps> = ({
         </button>
       </div>
       )}
+
+      {/* Lojinha de Materiais - floating drawer */}
+      <MaterialsShopDrawer
+        materials={settings.materials || []}
+        selectedIds={selectedMaterials}
+        onToggle={handleToggleMaterial}
+      />
     </form>
   );
 };

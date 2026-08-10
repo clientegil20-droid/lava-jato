@@ -171,6 +171,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </ul>
                 </div>
               )}
+
+              {appointment.materialNames && appointment.materialNames.length > 0 && (
+                <div className="pt-1">
+                  <div className="text-[11px] text-gray-400 font-sans font-semibold mb-1">
+                    MATERIAIS DA LOJINHA:
+                  </div>
+                  <ul className="space-y-0.5 text-gray-300">
+                    {appointment.materialNames.map((m, i) => (
+                      <li key={i} className="flex items-center gap-1">
+                        <span className="text-cyan-400">🛍️</span>
+                        <span>{m}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Total price */}
