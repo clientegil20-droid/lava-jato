@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { Employee, EmployeePayment } from '../types';
-import { X, FileText, FileSpreadsheet, PenLine, Trash2, CheckCircle2, Wallet } from 'lucide-react';
+import { X, FileText, FileSpreadsheet, CheckCircle2, Wallet } from 'lucide-react';
 import { formatBRL } from '../utils/whatsapp';
 
 interface EmployeePaymentModalProps {
@@ -33,70 +33,9 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
   onConfirm,
 }) => {
   const [format, setFormat] = useState<'pdf' | 'excel'>('pdf');
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [hasSignature, setHasSignature] = useState(false);
-  const [drawing, setDrawing] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   if (!isOpen || !employee) return null;
-
-  const getCanvasPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-  };
-
-  const startDraw = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const { x, y } = getCanvasPos(e);
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    setDrawing(true);
-    setHasSignature(true);
-  };
-
-  const drawMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawing) return;
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const { x, y } = getCanvasPos(e);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const endDraw = () => setDrawing(false);
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
-
-  const getSignatureDataUrl = (): string | null => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    return canvas.toDataURL('image/png');
-  };
 
   const getPaidLabel = () => {
     if (employee.payModel === 'salario') {
@@ -106,7 +45,19 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
     return 'Comissão percentual';
   };
 
-  const downloadPdf = (signatureDataUrl: string) => {
+  const getAgreedPercent = () => {
+    if (employee.payModel === 'salario') {
+      return employee.salaryType === 'diario'
+        ? `${formatBRL(employee.salaryValue || 0)} / dia`
+        : `${formatBRL(employee.salaryValue || 0)} / mês`;
+    }
+    if (employee.payModel === 'comissao') {
+      return `${formatBRL(employee.perWashValue || 0)} / lavagem`;
+    }
+    return `${employee.percentValue || 0}% das vendas`;
+  };
+
+  const downloadPdf = () => {
     const doc = new jsPDF();
     const now = new Date();
     const dateStr = now.toLocaleDateString('pt-BR');
@@ -140,9 +91,9 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
     line('Funcionário:', employee.name);
     line('Código:', employee.code || '-');
     line('Referente a:', getPaidLabel());
+    line('Combinado:', getAgreedPercent());
     line('Período:', `${new Date(periodStart).toLocaleDateString('pt-BR')} a ${new Date(periodEnd).toLocaleDateString('pt-BR')}`);
     line('Lavagens realizadas:', String(washCount));
-    line('Total de vendas:', formatBRL(revenue));
     line('Valor PAGO:', formatBRL(amount));
 
     y += 8;
@@ -154,23 +105,16 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Declaro que recebi o valor acima como pagamento.', 14, y);
-    y += 10;
+    y += 20;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Assinatura do funcionário:', 14, y);
-    y += 34;
-
-    try {
-      doc.addImage(signatureDataUrl, 'PNG', 14, y - 26, 80, 22);
-    } catch {
-      // ignore image errors
-    }
     doc.setDrawColor(30, 41, 59);
     doc.setLineWidth(0.3);
     doc.line(14, y + 6, 110, y + 6);
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${employee.name}`, 14, y + 12);
+    y += 20;
+    doc.text('Assinatura do patrão:', 14, y);
+    doc.line(14, y + 6, 110, y + 6);
 
     doc.save(`comprovante_${employee.name.replace(/\s+/g, '_')}.pdf`);
   };
@@ -191,9 +135,9 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
       ['Funcionário', employee.name],
       ['Código', employee.code || '-'],
       ['Referente a', getPaidLabel()],
+      ['Combinado', getAgreedPercent()],
       ['Período', `${new Date(periodStart).toLocaleDateString('pt-BR')} a ${new Date(periodEnd).toLocaleDateString('pt-BR')}`],
       ['Lavagens', washCount],
-      ['Total vendas', revenue],
       ['Valor PAGO', amount],
       [],
       ['Lavagens realizadas no período:'],
@@ -203,6 +147,8 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
       [`Declaro que recebi o valor acima como pagamento. Data: ${new Date().toLocaleDateString('pt-BR')}`],
       [],
       ['Assinatura do funcionário:'],
+      [],
+      ['Assinatura do patrão:'],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -214,11 +160,6 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
   };
 
   const handleConfirm = () => {
-    if (!hasSignature) {
-      alert('O funcionário deve assinar o comprovante.');
-      return;
-    }
-    const signatureDataUrl = getSignatureDataUrl();
     setConfirming(true);
     const payment: EmployeePayment = {
       id: `pay_${Date.now()}`,
@@ -232,11 +173,10 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
       periodEnd,
       paidAt: new Date().toISOString(),
       format,
-      signatureDataUrl: signatureDataUrl || undefined,
     };
     try {
       if (format === 'pdf') {
-        downloadPdf(signatureDataUrl || '');
+        downloadPdf();
       } else {
         downloadExcel();
       }
@@ -245,7 +185,6 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
     }
     onConfirm(payment, format);
     setConfirming(false);
-    clearSignature();
   };
 
   return (
@@ -306,7 +245,7 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
                 <FileText className={`w-5 h-5 ${format === 'pdf' ? 'text-emerald-400' : 'text-gray-400'}`} />
                 <div>
                   <div className="text-xs font-bold text-white">PDF</div>
-                  <div className="text-[10px] text-gray-500">Comprovante com assinatura</div>
+                  <div className="text-[10px] text-gray-500">Comprovante para imprimir</div>
                 </div>
               </button>
               <button
@@ -326,38 +265,15 @@ export const EmployeePaymentModal: React.FC<EmployeePaymentModalProps> = ({
             </div>
           </div>
 
-          {/* Signature pad */}
+          {/* Signature note */}
           <div>
-            <label className="block text-xs font-semibold text-gray-300 mb-1.5 flex items-center gap-1.5">
-              <PenLine className="w-3.5 h-3.5 text-emerald-400" />
-              Assinatura do funcionário (desenhe abaixo)
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              Assinatura
             </label>
-            <div className="relative rounded-xl overflow-hidden border border-gray-700 bg-white">
-              <canvas
-                ref={canvasRef}
-                width={600}
-                height={180}
-                onPointerDown={startDraw}
-                onPointerMove={drawMove}
-                onPointerUp={endDraw}
-                onPointerLeave={endDraw}
-                className="w-full h-40 touch-none cursor-crosshair"
-              />
-              {!hasSignature && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400 text-xs">
-                  Assine aqui...
-                </div>
-              )}
+            <div className="p-3 rounded-xl bg-[#121215] border border-gray-800 text-xs text-gray-400">
+              O comprovante será gerado sem assinatura. Após imprimir, o funcionário
+              e o patrão assinam manualmente no papel.
             </div>
-            {hasSignature && (
-              <button
-                onClick={clearSignature}
-                className="mt-1.5 text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
-              >
-                <Trash2 className="w-3 h-3" />
-                Limpar assinatura
-              </button>
-            )}
           </div>
 
           <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-200 flex items-start gap-2.5">
