@@ -26,6 +26,7 @@ import {
   CreditCard,
   Landmark,
   UserCheck,
+  ListTodo,
 } from 'lucide-react';
 import { PaymentMethodModal } from './PaymentMethodModal';
 import { ProductPickerModal } from './ProductPickerModal';
@@ -67,8 +68,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   const [assignTarget, setAssignTarget] = useState<'pronto' | 'entregue' | null>(null);
   const [assignEmployeeId, setAssignEmployeeId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<Record<string, AppointmentStatus>>({});
+  const [view, setView] = useState<'fila' | 'historico'>('fila');
 
   const isOwner = role === 'dono';
+
+  const PENDING_STATUSES: AppointmentStatus[] = ['agendado', 'aprovado', 'em_lavagem'];
+  const HISTORY_STATUSES: AppointmentStatus[] = ['pronto', 'entregue'];
 
   const METHOD_LABELS: Record<PaymentMethod, string> = {
     dinheiro: 'Dinheiro',
@@ -145,7 +150,11 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
   const cleanSearch = searchTerm.trim().toLowerCase().replace(/[\s-]/g, '');
   const rawSearch = searchTerm.trim().toLowerCase();
 
+  const visibleStatuses =
+    view === 'fila' ? PENDING_STATUSES : HISTORY_STATUSES;
+
   const filtered = appointments.filter((apt) => {
+    if (!visibleStatuses.includes(apt.status)) return false;
     const matchesStatus = filterStatus === 'todos' || apt.status === filterStatus;
     if (!rawSearch) return matchesStatus;
 
@@ -162,10 +171,12 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
     return matchesStatus && matchesSearch;
   });
 
-  // Extract last 5 completed/delivered washes
-  const finishedAppointments = appointments
-    .filter((apt) => apt.status === 'entregue')
-    .slice(0, 5);
+  const switchView = (next: 'fila' | 'historico') => {
+    setView(next);
+    setFilterStatus('todos');
+    setSearchTerm('');
+    setSelectedStatus({});
+  };
 
   const handleNotifyCarReady = (apt: Appointment) => {
     const msg = buildReadyMessage(apt, settings.storeName);
@@ -244,19 +255,46 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
             {isOwner
-              ? 'Modo dono: liberado para alterar status livremente, editar e excluir'
+              ? view === 'fila'
+                ? 'Modo dono: fila de lavagens pendentes'
+                : 'Histórico: lavagens prontas e concluídas'
               : 'Funcionário: avançar no fluxo da lavagem é livre; voltar ou cancelar exige aprovação do dono'}
           </p>
         </div>
 
-        <button
-          onClick={onCreateNewClick}
-          id="btn-new-appointment-staff"
-          className="w-full sm:w-auto px-4 py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-400/20 cursor-pointer active:scale-95 transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>Cadastrar Agendamento Balcão</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {isOwner && (
+            <button
+              onClick={() => switchView(view === 'fila' ? 'historico' : 'fila')}
+              className={`w-full sm:w-auto px-4 py-3 rounded-xl border text-xs font-black flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 ${
+                view === 'historico'
+                  ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-lg shadow-emerald-400/20'
+                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/40'
+              }`}
+            >
+              {view === 'historico' ? (
+                <>
+                  <ListTodo className="w-4 h-4 stroke-[3]" />
+                  <span>Voltar para a Fila</span>
+                </>
+              ) : (
+                <>
+                  <History className="w-4 h-4 stroke-[3]" />
+                  <span>Histórico</span>
+                </>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={onCreateNewClick}
+            id="btn-new-appointment-staff"
+            className="w-full sm:w-auto px-4 py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-400/20 cursor-pointer active:scale-95 transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Cadastrar Agendamento Balcão</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters and Search Bar */}
@@ -282,26 +320,42 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 custom-scrollbar">
-          {[
-            { id: 'todos', label: 'Todos' },
-            { id: 'agendado', label: 'Agendados' },
-            { id: 'aprovado', label: 'Aprovados' },
-            { id: 'em_lavagem', label: 'Em Lavagem' },
-            { id: 'pronto', label: 'Prontos' },
-            { id: 'entregue', label: 'Concluídos' },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilterStatus(f.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                filterStatus === f.id
-                  ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {view === 'fila'
+            ? [
+                { id: 'todos', label: 'Todos' },
+                { id: 'agendado', label: 'Agendados' },
+                { id: 'aprovado', label: 'Aprovados' },
+                { id: 'em_lavagem', label: 'Em Lavagem' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterStatus(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    filterStatus === f.id
+                      ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))
+            : [
+                { id: 'todos', label: 'Todos' },
+                { id: 'pronto', label: 'Prontos' },
+                { id: 'entregue', label: 'Concluídos' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterStatus(f.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    filterStatus === f.id
+                      ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
         </div>
       </div>
 
@@ -310,7 +364,9 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
         <div className="text-center py-12 px-4 rounded-2xl bg-[#1d1d22] border border-gray-800/80 space-y-3">
           <Calendar className="w-10 h-10 text-gray-600 mx-auto" />
           <p className="text-sm text-gray-400 font-medium">
-            Nenhum agendamento encontrado para os filtros selecionados.
+            {view === 'fila'
+              ? 'Nenhuma lavagem pendente. Quando um serviço for marcado como Pronto ou Concluído, ele sai daqui e vai para o Histórico.'
+              : 'Nenhuma lavagem pronta ou concluída no histórico ainda.'}
           </p>
           <button
             onClick={onCreateNewClick}
@@ -532,98 +588,6 @@ export const AppointmentQueue: React.FC<AppointmentQueueProps> = ({
           ))}
         </div>
       )}
-
-      {/* Histórico das Últimas 5 Lavagens Finalizadas */}
-      <div className="mt-8 p-4 sm:p-5 rounded-2xl bg-[#18181c] border border-gray-800 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <History className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
-                Histórico Recente
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Últimas 5 Finalizadas
-                </span>
-              </h3>
-              <p className="text-xs text-gray-400">
-                Consulta rápida de serviços concluídos e entregues ao cliente
-              </p>
-            </div>
-          </div>
-          <span className="text-xs text-gray-500 font-medium self-end sm:self-auto">
-            Total exibido: {finishedAppointments.length}
-          </span>
-        </div>
-
-        {finishedAppointments.length === 0 ? (
-          <div className="text-center py-6 text-xs text-gray-500">
-            Nenhuma lavagem finalizada/entregue registrada no momento.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {finishedAppointments.map((apt) => (
-              <div
-                key={`history_${apt.id}`}
-                className="p-3.5 rounded-xl bg-[#121215] border border-gray-800 hover:border-gray-700 transition-all flex flex-col justify-between gap-3 text-xs"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-cyan-300 text-xs bg-gray-800 px-2 py-0.5 rounded border border-gray-700">
-                      {apt.code}
-                    </span>
-                    <span className="text-[11px] text-gray-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-emerald-400" />
-                      {apt.date.split('-').reverse().join('/')}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="font-bold text-white text-xs truncate">{apt.customerName}</div>
-                    <div className="text-gray-400 text-[11px] truncate flex items-center gap-1">
-                      <Car className="w-3 h-3 text-cyan-400 shrink-0" />
-                      <span>
-                        {apt.carModel} {apt.carPlate ? `(${apt.carPlate.toUpperCase()})` : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-gray-400 text-[11px] bg-gray-900/60 p-2 rounded-lg border border-gray-800/80 space-y-0.5">
-                    <div className="font-semibold text-gray-300 truncate">{apt.washName}</div>
-                    {apt.extraNames && apt.extraNames.length > 0 && (
-                      <div className="text-[10px] text-cyan-400 truncate">
-                        + {apt.extraNames.join(', ')}
-                      </div>
-                    )}
-                  </div>
-
-                  {apt.paymentMethod && (
-                    <div className="text-[10px] text-emerald-300 flex items-center gap-1">
-                      {METHOD_ICONS[apt.paymentMethod]}
-                      {METHOD_LABELS[apt.paymentMethod]}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-gray-800/80 mt-auto">
-                  <span className="font-black text-emerald-400 text-sm">
-                    {formatBRL(apt.totalPrice)}
-                  </span>
-                  <button
-                    onClick={() => onOpenReceiptModal(apt)}
-                    className="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-300 text-[11px] font-bold flex items-center gap-1 border border-gray-700 transition-all cursor-pointer"
-                    title="Ver comprovante da lavagem"
-                  >
-                    <Receipt className="w-3 h-3" />
-                    <span>Comprovante</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Payment method modal when finalizing */}
       <PaymentMethodModal
